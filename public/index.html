@@ -85,6 +85,20 @@
     #selection-toolbar button.danger { background: #c0392b; }
     #selection-toolbar button.danger:hover { background: #e74c3c; }
 
+    /* Text entries section */
+    .texts-section { margin-bottom: 1rem; }
+    .texts-nav { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
+    .texts-nav button { padding: 0.25rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.8rem; min-width: 28px; }
+    .texts-nav button:hover { background: #533483; }
+    .texts-nav .texts-counter { font-size: 0.85rem; color: #aaa; margin: 0 0.3rem; }
+    .texts-nav .texts-spacer { flex: 1; }
+    .texts-section textarea { width: 100%; padding: 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; resize: vertical; min-height: 150px; font-family: inherit; }
+    .texts-section .texts-actions { margin-top: 0.4rem; display: flex; gap: 0.4rem; }
+    .texts-section .texts-actions button { padding: 0.4rem 1rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .texts-section .texts-actions button:hover { background: #6c44a0; }
+    .texts-section .texts-actions button.danger { background: #c0392b; }
+    .texts-section .texts-actions button.danger:hover { background: #e74c3c; }
+
     /* File-ops section in detail */
     .fileops-section { margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .fileops-section button { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
@@ -169,6 +183,25 @@
           <input id="tag-input" list="tag-suggestions" placeholder="Add tag...">
           <datalist id="tag-suggestions"></datalist>
           <button id="add-tag-btn">Add</button>
+        </div>
+      </div>
+
+      <div class="texts-section">
+        <div class="texts-nav">
+          <button id="txt-first" title="First">|&lt;</button>
+          <button id="txt-back5" title="Back 5">&lt;&lt;</button>
+          <button id="txt-prev" title="Previous">&lt;</button>
+          <span class="texts-counter" id="txt-counter">0 / 0</span>
+          <button id="txt-next" title="Next">&gt;</button>
+          <button id="txt-fwd5" title="Forward 5">&gt;&gt;</button>
+          <button id="txt-last" title="Last">&gt;|</button>
+          <span class="texts-spacer"></span>
+          <button id="txt-new">+ New</button>
+          <button id="txt-delete" class="danger" style="background:#c0392b;border:none;color:#fff;">Delete</button>
+        </div>
+        <textarea id="txt-body" placeholder="Text entry..."></textarea>
+        <div class="texts-actions">
+          <button id="txt-save">Save</button>
         </div>
       </div>
 
@@ -392,6 +425,9 @@
       // Load tags
       await loadPhotoTags();
 
+      // Load text entries
+      await loadPhotoTexts();
+
       // Set active rating button
       document.querySelectorAll('.rating-section button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.rating === (photo.rating || ''));
@@ -471,6 +507,73 @@
       tagInput.value = '';
       loadPhotoTags();
       loadAllTags();
+    });
+
+    // --- Text entries ---
+    const txtBody = document.getElementById('txt-body');
+    const txtCounter = document.getElementById('txt-counter');
+    let photoTexts = [];
+    let txtIndex = 0;
+
+    async function loadPhotoTexts() {
+      if (!currentPhoto) { photoTexts = []; txtIndex = 0; showCurrentText(); return; }
+      const res = await fetch(`/api/photo/${currentPhoto.id}/texts`);
+      photoTexts = await res.json();
+      txtIndex = photoTexts.length > 0 ? 0 : 0;
+      showCurrentText();
+    }
+
+    function showCurrentText() {
+      if (photoTexts.length === 0) {
+        txtCounter.textContent = '0 / 0';
+        txtBody.value = '';
+        return;
+      }
+      if (txtIndex < 0) txtIndex = 0;
+      if (txtIndex >= photoTexts.length) txtIndex = photoTexts.length - 1;
+      txtCounter.textContent = `${txtIndex + 1} / ${photoTexts.length}`;
+      txtBody.value = photoTexts[txtIndex].body || '';
+    }
+
+    document.getElementById('txt-first').addEventListener('click', () => { txtIndex = 0; showCurrentText(); });
+    document.getElementById('txt-back5').addEventListener('click', () => { txtIndex = Math.max(0, txtIndex - 5); showCurrentText(); });
+    document.getElementById('txt-prev').addEventListener('click', () => { txtIndex = Math.max(0, txtIndex - 1); showCurrentText(); });
+    document.getElementById('txt-next').addEventListener('click', () => { txtIndex = Math.min(photoTexts.length - 1, txtIndex + 1); showCurrentText(); });
+    document.getElementById('txt-fwd5').addEventListener('click', () => { txtIndex = Math.min(photoTexts.length - 1, txtIndex + 5); showCurrentText(); });
+    document.getElementById('txt-last').addEventListener('click', () => { txtIndex = photoTexts.length - 1; showCurrentText(); });
+
+    document.getElementById('txt-new').addEventListener('click', async () => {
+      if (!currentPhoto) return;
+      const res = await fetch(`/api/photo/${currentPhoto.id}/texts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: '' })
+      });
+      const entry = await res.json();
+      photoTexts.push(entry);
+      txtIndex = photoTexts.length - 1;
+      showCurrentText();
+      txtBody.focus();
+    });
+
+    document.getElementById('txt-save').addEventListener('click', async () => {
+      if (photoTexts.length === 0 || !currentPhoto) return;
+      const entry = photoTexts[txtIndex];
+      await fetch(`/api/text/${entry.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: txtBody.value })
+      });
+      entry.body = txtBody.value;
+    });
+
+    document.getElementById('txt-delete').addEventListener('click', async () => {
+      if (photoTexts.length === 0 || !currentPhoto) return;
+      const entry = photoTexts[txtIndex];
+      await fetch(`/api/text/${entry.id}`, { method: 'DELETE' });
+      photoTexts.splice(txtIndex, 1);
+      if (txtIndex > 0 && txtIndex >= photoTexts.length) txtIndex = photoTexts.length - 1;
+      showCurrentText();
     });
 
     // Filters — folder and group are mutually exclusive
