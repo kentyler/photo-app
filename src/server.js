@@ -3,6 +3,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const fs = require('fs');
 const sharp = require('sharp');
+const { fileHash } = require('./file-hash');
 
 const app = express();
 app.use(express.json());
@@ -50,7 +51,7 @@ app.get('/api/photos', async (req, res) => {
     `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
             caption, rating, source_folder
      FROM catalog.files
-     WHERE source_folder = $1 AND media_type = 'photo'
+     WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo'
      ORDER BY taken_at ASC NULLS LAST, filename ASC`,
     [folder]
   );
@@ -209,6 +210,20 @@ app.get('/api/folders', async (req, res) => {
     `SELECT source_folder, COUNT(*) as count
      FROM catalog.files WHERE media_type = 'photo'
      GROUP BY source_folder ORDER BY source_folder`
+  );
+  res.json(rows);
+});
+
+// --- API: folder tree (drive > parent > source_folder) ---
+app.get('/api/folder-tree', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT
+       regexp_replace(original_path, '/[^/]+$', '') AS folder_path,
+       COUNT(*)::int AS count
+     FROM catalog.files
+     WHERE media_type = 'photo'
+     GROUP BY folder_path
+     ORDER BY folder_path`
   );
   res.json(rows);
 });
@@ -464,6 +479,102 @@ app.delete('/api/groups/:id/photos/:fileId', async (req, res) => {
     [req.params.id, req.params.fileId]
   );
   res.json({ ok: true });
+});
+
+// --- API: disk folder browsing ---
+const PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'bmp', 'heic']);
+
+app.get('/api/disk-folders', async (req, res) => {
+  const dirPath = req.query.path;
+  if (!dirPath) return res.status(400).json({ error: 'path param required' });
+  try {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    const dirs = [];
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const full = path.join(dirPath, e.name).replace(/\\/g, '/');
+      let hasSubdirs = false;
+      try {
+        const sub = await fs.promises.readdir(full, { withFileTypes: true });
+        hasSubdirs = sub.some(s => s.isDirectory());
+      } catch (_) {}
+      dirs.push({ name: e.name, path: full, hasSubdirs });
+    }
+    dirs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    res.json(dirs);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/disk-photos', async (req, res) => {
+  const dirPath = req.query.path;
+  if (!dirPath) return res.status(400).json({ error: 'path param required' });
+  try {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    const photos = [];
+    for (const e of entries) {
+      if (!e.isFile()) continue;
+      const ext = path.extname(e.name).toLowerCase().replace('.', '');
+      if (!PHOTO_EXTS.has(ext)) continue;
+      const full = path.join(dirPath, e.name).replace(/\\/g, '/');
+      photos.push({ filename: e.name, disk_path: full });
+    }
+    photos.sort((a, b) => a.filename.localeCompare(b.filename, undefined, { sensitivity: 'base' }));
+    res.json(photos);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/disk-photos/match', async (req, res) => {
+  const dirPath = req.query.path;
+  if (!dirPath) return res.status(400).json({ error: 'path param required' });
+  try {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    const results = [];
+    for (const e of entries) {
+      if (!e.isFile()) continue;
+      const ext = path.extname(e.name).toLowerCase().replace('.', '');
+      if (!PHOTO_EXTS.has(ext)) continue;
+      const full = path.join(dirPath, e.name).replace(/\\/g, '/');
+      try {
+        const hash = await fileHash(full);
+        const { rows } = await pool.query(
+          'SELECT id, rating, caption FROM catalog.files WHERE file_hash = $1 LIMIT 1',
+          [hash]
+        );
+        if (rows.length > 0) {
+          results.push({
+            filename: e.name,
+            db_id: rows[0].id,
+            rating: rows[0].rating,
+            caption: rows[0].caption
+          });
+        }
+      } catch (_) {}
+    }
+    res.json(results);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/disk-photo', (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ error: 'path param required' });
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file not found' });
+
+  const ext = path.extname(filePath).toLowerCase().replace('.', '');
+  const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', tif: 'image/jpeg', tiff: 'image/jpeg', heic: 'image/jpeg' };
+
+  if (ext === 'tif' || ext === 'tiff' || ext === 'bmp' || ext === 'heic') {
+    res.setHeader('Content-Type', 'image/jpeg');
+    sharp(filePath).jpeg({ quality: 85 }).pipe(res);
+  } else {
+    res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+    fs.createReadStream(filePath).pipe(res);
+  }
 });
 
 // --- Global error handler (return JSON, not HTML) ---

@@ -11,7 +11,21 @@
     /* Header */
     header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; background: #16213e; border-bottom: 1px solid #0f3460; }
     header h1 { font-size: 1.2rem; font-weight: 600; }
-    #folder-select, #group-select { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
+    #group-select { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
+    /* Custom folder dropdown */
+    #folder-dropdown { position: relative; }
+    #folder-btn { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; cursor: pointer; min-width: 200px; text-align: left; white-space: nowrap; }
+    #folder-btn:hover { background: #533483; }
+    #folder-btn::after { content: ' \25BE'; }
+    #folder-list { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; max-height: 60vh; overflow-y: scroll; background: #16213e; border: 1px solid #533483; border-radius: 4px; z-index: 50; margin-top: 2px; }
+    #folder-list::-webkit-scrollbar { width: 10px; }
+    #folder-list::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
+    #folder-list::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
+    #folder-list::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
+    #folder-list.open { display: block; }
+    #folder-list .fd-item { padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap; border-bottom: 1px solid #0f3460; }
+    #folder-list .fd-item:hover { background: #533483; }
+    #folder-list .fd-item.active { background: #533483; font-weight: 600; }
     #filter-rating { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
     #filter-tag { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
     .photo-count { font-size: 0.85rem; color: #aaa; margin-left: auto; }
@@ -134,12 +148,46 @@
     #group-picker-dialog .btn-add { background: #533483; color: #fff; }
     #group-picker-dialog .btn-cancel { background: #333; color: #eee; }
     .header-sep { color: #533483; font-size: 0.9rem; }
+
+    /* Folder picker button */
+    #pick-parent-btn { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
+    #pick-parent-btn:hover { background: #533483; }
+
+    /* Folder picker modal */
+    #folder-picker-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
+    #folder-picker-modal.active { display: flex; }
+    #folder-picker-modal .fp-panel { background: #16213e; border-radius: 8px; width: 500px; max-height: 70vh; display: flex; flex-direction: column; padding: 1rem; }
+    #folder-picker-modal h3 { margin-bottom: 0.75rem; font-size: 1rem; }
+    #fp-search { width: 100%; padding: 0.4rem 0.6rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.9rem; }
+    #fp-list { flex: 1; overflow-y: scroll; min-height: 0; border: 1px solid #0f3460; border-radius: 4px; }
+    #fp-list::-webkit-scrollbar { width: 10px; }
+    #fp-list::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
+    #fp-list::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
+    #fp-list::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
+    #fp-list .fp-item { padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #0f3460; display: flex; align-items: center; gap: 0.4rem; }
+    #fp-list .fp-item:hover { background: #533483; }
+    #fp-list .fp-item.selected { background: #533483; font-weight: 600; }
+    #fp-list .fp-count { color: #aaa; font-size: 0.8rem; margin-left: 0.5rem; }
+    #fp-list .fp-arrow { color: #aaa; font-size: 0.7rem; margin-left: auto; }
+    #fp-breadcrumb { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-bottom: 0.5rem; align-items: center; font-size: 0.85rem; }
+    #fp-breadcrumb .fp-crumb { color: #8e94f2; cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    #fp-breadcrumb .fp-crumb:hover { background: #533483; }
+    #fp-breadcrumb .fp-sep { color: #555; }
+    .fp-btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+    .fp-btn-row button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
+    .fp-btn-select { background: #533483; color: #fff; }
+    .fp-btn-select:hover { background: #6c44a0; }
+    .fp-btn-cancel { background: #333; color: #eee; }
   </style>
 </head>
 <body>
   <header>
     <h1>Photo Triage</h1>
-    <select id="folder-select"><option value="">-- Select folder --</option><option value="__all__">All folders</option></select>
+    <button id="pick-parent-btn" title="Choose parent folder">📁 Pick folder...</button>
+    <div id="folder-dropdown">
+      <button id="folder-btn">-- Folder --</button>
+      <div id="folder-list"></div>
+    </div>
     <span class="header-sep">|</span>
     <select id="group-select"><option value="">-- Select group --</option></select>
     <select id="filter-rating">
@@ -163,14 +211,6 @@
       <button class="close-btn" id="close-detail">&times;</button>
       <img id="detail-img" src="" alt="">
       <h3 id="detail-filename"></h3>
-
-      <div class="rating-section">
-        <span>Rating:</span>
-        <button data-rating="keep">Keep</button>
-        <button data-rating="duplicate">Duplicate</button>
-        <button data-rating="skip">Skip</button>
-        <button data-rating="">Clear</button>
-      </div>
 
       <div class="caption-section">
         <textarea id="caption-input" placeholder="Add a caption..."></textarea>
@@ -205,6 +245,14 @@
         </div>
       </div>
 
+      <div class="rating-section">
+        <span>Rating:</span>
+        <button data-rating="keep">Keep</button>
+        <button data-rating="duplicate">Duplicate</button>
+        <button data-rating="skip">Skip</button>
+        <button data-rating="">Clear</button>
+      </div>
+
       <div class="fileops-section">
         <button id="btn-rename">Rename</button>
         <button id="btn-convert-png">Convert to PNG</button>
@@ -229,7 +277,7 @@
     <div id="folder-picker-dialog">
       <h3>Move to folder</h3>
       <input id="folder-path-input" placeholder="Enter folder path (e.g. D:\Photos\Family)">
-      <div class="folder-list" id="folder-list"></div>
+      <div class="folder-list" id="move-folder-list"></div>
       <div class="btn-row">
         <button class="btn-cancel" id="folder-picker-cancel">Cancel</button>
         <button class="btn-move" id="folder-picker-confirm">Move</button>
@@ -259,9 +307,27 @@
     <div class="lb-counter" id="lb-counter"></div>
   </div>
 
+  <div id="folder-picker-modal">
+    <div class="fp-panel">
+      <h3>Browse folders</h3>
+      <div id="fp-breadcrumb"></div>
+      <div id="fp-list"></div>
+      <div class="fp-btn-row">
+        <button class="fp-btn-cancel" id="fp-cancel">Cancel</button>
+        <button class="fp-btn-select" id="fp-select">Select this folder</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const grid = document.getElementById('photo-grid');
-    const folderSelect = document.getElementById('folder-select');
+    const pickParentBtn = document.getElementById('pick-parent-btn');
+    const folderBtn = document.getElementById('folder-btn');
+    const folderList = document.getElementById('folder-list');
+    let selectedFolder = ''; // disk path of chosen folder
+    const fpModal = document.getElementById('folder-picker-modal');
+    const fpBreadcrumb = document.getElementById('fp-breadcrumb');
+    const fpList = document.getElementById('fp-list');
     const groupSelect = document.getElementById('group-select');
     const filterRating = document.getElementById('filter-rating');
     const filterTag = document.getElementById('filter-tag');
@@ -277,21 +343,117 @@
     let photos = [];
     let allTags = [];
     let currentPhoto = null;
-    let activeSource = null; // 'folder' or 'group'
+    let activeSource = null; // 'folder', 'group', or 'disk'
+    let selectedParent = ''; // chosen parent disk path
+    let fpBrowsePath = ''; // current path being browsed in folder picker
 
-    // Load folders
-    async function loadFolders() {
-      const res = await fetch('/api/folders');
-      const folders = await res.json();
-      // Clear existing folder options beyond the first two
-      while (folderSelect.options.length > 2) folderSelect.remove(2);
-      folders.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.source_folder;
-        opt.textContent = `${f.source_folder} (${f.count})`;
-        folderSelect.appendChild(opt);
+    // --- Filesystem-driven folder picker ---
+    pickParentBtn.addEventListener('click', () => {
+      fpBrowsePath = selectedParent || 'D:/';
+      fpModal.classList.add('active');
+      renderFpBrowser();
+    });
+
+    document.getElementById('fp-cancel').addEventListener('click', () => {
+      fpModal.classList.remove('active');
+    });
+
+    fpModal.addEventListener('click', (e) => {
+      if (e.target === fpModal) fpModal.classList.remove('active');
+    });
+
+    document.getElementById('fp-select').addEventListener('click', () => {
+      selectedParent = fpBrowsePath;
+      pickParentBtn.textContent = '\u{1F4C1} ' + selectedParent;
+      fpModal.classList.remove('active');
+      populateChildFolders();
+    });
+
+    function renderFpBreadcrumb() {
+      fpBreadcrumb.innerHTML = '';
+      if (!fpBrowsePath) return;
+      const parts = fpBrowsePath.split('/');
+      parts.forEach((part, i) => {
+        if (i > 0) {
+          const sep = document.createElement('span');
+          sep.className = 'fp-sep';
+          sep.textContent = '/';
+          fpBreadcrumb.appendChild(sep);
+        }
+        const crumb = document.createElement('span');
+        crumb.className = 'fp-crumb';
+        crumb.textContent = part || '/';
+        const ancestorPath = parts.slice(0, i + 1).join('/');
+        crumb.addEventListener('click', () => {
+          fpBrowsePath = ancestorPath;
+          renderFpBrowser();
+        });
+        fpBreadcrumb.appendChild(crumb);
       });
     }
+
+    async function renderFpBrowser() {
+      renderFpBreadcrumb();
+      fpList.innerHTML = '<div class="fp-item" style="color:#aaa;">Loading...</div>';
+      try {
+        const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(fpBrowsePath)}`);
+        const dirs = await res.json();
+        fpList.innerHTML = '';
+        if (dirs.length === 0) {
+          fpList.innerHTML = '<div class="fp-item" style="color:#aaa;">(no subdirectories)</div>';
+          return;
+        }
+        dirs.forEach(d => {
+          const item = document.createElement('div');
+          item.className = 'fp-item';
+          item.innerHTML = `<span>${d.name}</span>${d.hasSubdirs ? '<span class="fp-arrow">&#9654;</span>' : ''}`;
+          item.addEventListener('click', () => {
+            fpBrowsePath = d.path;
+            renderFpBrowser();
+          });
+          fpList.appendChild(item);
+        });
+      } catch (err) {
+        fpList.innerHTML = `<div class="fp-item" style="color:#c0392b;">Error: ${err.message}</div>`;
+      }
+    }
+
+    // Populate folder dropdown with disk subdirectories of selectedParent
+    async function populateChildFolders() {
+      folderList.innerHTML = '';
+      selectedFolder = '';
+      folderBtn.textContent = '-- Folder --';
+      if (!selectedParent) return;
+
+      try {
+        const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(selectedParent)}`);
+        const dirs = await res.json();
+        dirs.forEach(d => {
+          const item = document.createElement('div');
+          item.className = 'fd-item';
+          item.textContent = d.name;
+          item.addEventListener('click', () => selectFolder(d.path, d.name));
+          folderList.appendChild(item);
+        });
+      } catch (_) {}
+    }
+
+    function selectFolder(diskPath, label) {
+      selectedFolder = diskPath;
+      folderBtn.textContent = label;
+      folderList.classList.remove('open');
+      activeSource = 'disk';
+      groupSelect.value = '';
+      loadPhotos();
+    }
+
+    folderBtn.addEventListener('click', () => {
+      folderList.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#folder-dropdown')) folderList.classList.remove('open');
+    });
 
     // Load groups
     async function loadGroups() {
@@ -323,22 +485,57 @@
       });
     }
 
-    // Load photos
+    // Load photos — disk mode uses /api/disk-photos, group mode uses /api/photos
     async function loadPhotos() {
-      const folder = folderSelect.value;
       const group = groupSelect.value;
 
       if (activeSource === 'group' && group) {
         const res = await fetch(`/api/photos?group=${encodeURIComponent(group)}`);
         photos = await res.json();
+        // DB photos: mark source
+        photos.forEach(p => { p._src = 'db'; });
         renderGrid();
         return;
       }
 
-      if (!folder) { grid.innerHTML = ''; photoCount.textContent = ''; return; }
-      const res = await fetch(`/api/photos?folder=${encodeURIComponent(folder)}`);
-      photos = await res.json();
-      renderGrid();
+      if (activeSource === 'disk' && selectedFolder) {
+        const res = await fetch(`/api/disk-photos?path=${encodeURIComponent(selectedFolder)}`);
+        const diskFiles = await res.json();
+        // Map to photo objects with _src='disk'
+        photos = diskFiles.map(f => ({
+          filename: f.filename,
+          disk_path: f.disk_path,
+          _src: 'disk',
+          id: null, rating: null, caption: null
+        }));
+        renderGrid();
+        // Async: hash-match to get DB metadata
+        matchDiskPhotos(selectedFolder);
+        return;
+      }
+
+      grid.innerHTML = '';
+      photoCount.textContent = '';
+    }
+
+    async function matchDiskPhotos(folderPath) {
+      try {
+        const res = await fetch(`/api/disk-photos/match?path=${encodeURIComponent(folderPath)}`);
+        const matches = await res.json();
+        if (selectedFolder !== folderPath) return; // navigated away
+        const matchMap = new Map(matches.map(m => [m.filename, m]));
+        let changed = false;
+        photos.forEach(p => {
+          const m = matchMap.get(p.filename);
+          if (m) {
+            p.id = m.db_id;
+            p.rating = m.rating;
+            p.caption = m.caption;
+            changed = true;
+          }
+        });
+        if (changed) renderGrid();
+      } catch (_) {}
     }
 
     function renderGrid() {
@@ -352,10 +549,7 @@
         filtered = filtered.filter(p => p.rating === ratingFilter);
       }
 
-      // Tag filter is async but we do a simple client filter based on cached tag data
-      // For now, tag filtering requires server-side (we'll load tagged file ids)
-      if (tagFilter) {
-        // We'll do tag filtering via a class on cards after loading
+      if (tagFilter && activeSource !== 'disk') {
         loadTaggedFiles(tagFilter).then(taggedIds => {
           const set = new Set(taggedIds);
           const tagFiltered = filtered.filter(p => set.has(p.id));
@@ -368,10 +562,12 @@
     }
 
     async function loadTaggedFiles(tagId) {
-      const folder = folderSelect.value;
-      const res = await fetch(`/api/photos?folder=${encodeURIComponent(folder)}`);
+      const group = groupSelect.value;
+      const url = activeSource === 'group' && group
+        ? `/api/photos?group=${encodeURIComponent(group)}`
+        : `/api/photos?folder=${encodeURIComponent(selectedFolder)}`;
+      const res = await fetch(url);
       const all = await res.json();
-      // Check each photo's tags (expensive but fine for 200 files)
       const ids = [];
       for (const p of all) {
         const tr = await fetch(`/api/photo/${p.id}/tags`);
@@ -381,25 +577,29 @@
       return ids;
     }
 
+    function photoImgSrc(p) {
+      if (p._src === 'disk') return `/api/disk-photo?path=${encodeURIComponent(p.disk_path)}`;
+      return `/api/photo/${p.id}`;
+    }
+
     function renderCards(list) {
-      const showFolder = folderSelect.value === '__all__' || activeSource === 'group';
       photoCount.textContent = `${list.length} photos`;
       grid.innerHTML = '';
-      list.forEach(p => {
+      list.forEach((p, idx) => {
         const card = document.createElement('div');
-        card.className = 'photo-card' + (selectedIds.has(p.id) ? ' selected' : '');
-        card.dataset.photoId = p.id;
-        const folderName = p.source_folder ? p.source_folder.split(/[\\/]/).pop() : '';
+        const cardKey = p.id || p.disk_path;
+        card.className = 'photo-card' + (p.id && selectedIds.has(p.id) ? ' selected' : '');
+        card.dataset.photoId = p.id || '';
+        card.dataset.idx = idx;
         card.innerHTML = `
-          <input type="checkbox" class="select-cb" ${selectedIds.has(p.id) ? 'checked' : ''}>
-          <img src="/api/photo/${p.id}" loading="lazy" alt="${p.filename}">
+          <input type="checkbox" class="select-cb" ${p.id && selectedIds.has(p.id) ? 'checked' : ''}>
+          <img src="${photoImgSrc(p)}" loading="lazy" alt="${p.filename}">
           ${p.rating ? `<span class="rating-badge rating-${p.rating}">${p.rating}</span>` : ''}
-          ${showFolder && folderName ? `<span class="folder-badge" title="${p.source_folder}">${folderName}</span>` : ''}
         `;
         const cb = card.querySelector('.select-cb');
         cb.addEventListener('click', (e) => {
           e.stopPropagation();
-          toggleSelect(p.id, card, cb);
+          if (p.id) toggleSelect(p.id, card, cb);
         });
         card.addEventListener('click', (e) => {
           if (e.target === cb) return;
@@ -413,20 +613,24 @@
     // Detail view
     async function openDetail(photo) {
       currentPhoto = photo;
-      detailImg.src = `/api/photo/${photo.id}`;
+      detailImg.src = photoImgSrc(photo);
       detailFilename.textContent = photo.filename;
       overlay.classList.add('active');
 
-      // Load caption
-      const capRes = await fetch(`/api/photo/${photo.id}/caption`);
-      const capData = await capRes.json();
-      captionInput.value = capData.caption || '';
-
-      // Load tags
-      await loadPhotoTags();
-
-      // Load text entries
-      await loadPhotoTexts();
+      if (photo.id) {
+        // Load caption
+        const capRes = await fetch(`/api/photo/${photo.id}/caption`);
+        const capData = await capRes.json();
+        captionInput.value = capData.caption || '';
+        // Load tags
+        await loadPhotoTags();
+        // Load text entries
+        await loadPhotoTexts();
+      } else {
+        captionInput.value = photo.caption || '';
+        detailTags.innerHTML = '<span style="color:#aaa;font-size:0.8rem;">Not in database (no hash match yet)</span>';
+        photoTexts = []; txtIndex = 0; showCurrentText();
+      }
 
       // Set active rating button
       document.querySelectorAll('.rating-section button').forEach(btn => {
@@ -435,6 +639,7 @@
     }
 
     async function loadPhotoTags() {
+      if (!currentPhoto || !currentPhoto.id) { detailTags.innerHTML = ''; return; }
       const res = await fetch(`/api/photo/${currentPhoto.id}/tags`);
       const tags = await res.json();
       detailTags.innerHTML = '';
@@ -454,18 +659,20 @@
     document.getElementById('close-detail').addEventListener('click', async () => {
       await saveCurrentText();
       overlay.classList.remove('active');
-      loadPhotos(); // Refresh grid to show updated ratings
+      // Don't reload disk photos on close (avoid re-hashing), just re-render
+      renderGrid();
     });
     overlay.addEventListener('click', async (e) => {
       if (e.target === overlay) {
         await saveCurrentText();
         overlay.classList.remove('active');
-        loadPhotos();
+        renderGrid();
       }
     });
 
     // Save caption
     document.getElementById('save-caption').addEventListener('click', async () => {
+      if (!currentPhoto || !currentPhoto.id) return;
       await fetch(`/api/photo/${currentPhoto.id}/caption`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -476,6 +683,7 @@
     // Rating buttons
     document.querySelectorAll('.rating-section button').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (!currentPhoto || !currentPhoto.id) return;
         const rating = btn.dataset.rating || null;
         await fetch(`/api/photo/${currentPhoto.id}/rating`, {
           method: 'PUT',
@@ -492,7 +700,7 @@
     // Add tag
     document.getElementById('add-tag-btn').addEventListener('click', async () => {
       const name = tagInput.value.trim();
-      if (!name) return;
+      if (!name || !currentPhoto || !currentPhoto.id) return;
       // Create or find tag
       const res = await fetch('/api/tags', {
         method: 'POST',
@@ -597,20 +805,12 @@
       showCurrentText();
     });
 
-    // Filters — folder and group are mutually exclusive
-    folderSelect.addEventListener('change', () => {
-      if (folderSelect.value) {
-        activeSource = 'folder';
-        groupSelect.value = '';
-      } else {
-        activeSource = null;
-      }
-      loadPhotos();
-    });
+    // Filters -- folder and group are mutually exclusive
     groupSelect.addEventListener('change', () => {
       if (groupSelect.value) {
         activeSource = 'group';
-        folderSelect.value = '';
+        selectedFolder = '';
+        folderBtn.textContent = '-- Folder --';
       } else {
         activeSource = null;
       }
@@ -646,7 +846,7 @@
 
     function showLbPhoto() {
       if (lbList.length === 0) return;
-      lbImg.src = `/api/photo/${lbList[lbIndex].id}`;
+      lbImg.src = photoImgSrc(lbList[lbIndex]);
       lbCounter.textContent = `${lbIndex + 1} / ${lbList.length}`;
     }
 
@@ -749,7 +949,7 @@
     const fileopStatus = document.getElementById('fileops-status');
 
     document.getElementById('btn-rename').addEventListener('click', async () => {
-      if (!currentPhoto) return;
+      if (!currentPhoto || !currentPhoto.id) return;
       const stem = currentPhoto.filename.replace(/\.[^.]+$/, '');
       const newName = prompt('New filename (without extension):', stem);
       if (!newName || newName === stem) return;
@@ -773,7 +973,7 @@
     });
 
     document.getElementById('btn-convert-png').addEventListener('click', async () => {
-      if (!currentPhoto) return;
+      if (!currentPhoto || !currentPhoto.id) return;
       fileopStatus.textContent = 'Converting to PNG...';
       const res = await fetch(`/api/photo/${currentPhoto.id}/convert-png`, { method: 'POST' });
       const data = await res.json();
@@ -787,7 +987,7 @@
     });
 
     async function doResize(mode) {
-      if (!currentPhoto) return;
+      if (!currentPhoto || !currentPhoto.id) return;
       fileopStatus.textContent = `Resizing (${mode})...`;
       const res = await fetch(`/api/photo/${currentPhoto.id}/resize`, {
         method: 'POST',
@@ -814,21 +1014,25 @@
     // --- Move to folder ---
     const folderPickerOverlay = document.getElementById('folder-picker-overlay');
     const folderPathInput = document.getElementById('folder-path-input');
-    const folderListEl = document.getElementById('folder-list');
+    const moveFolderListEl = document.getElementById('move-folder-list');
 
     document.getElementById('btn-move-selected').addEventListener('click', async () => {
       if (selectedIds.size === 0) return;
-      // Populate folder list from known folders
-      folderListEl.innerHTML = '';
-      const res = await fetch('/api/folders');
-      const folders = await res.json();
-      folders.forEach(f => {
-        const div = document.createElement('div');
-        div.className = 'folder-option';
-        div.textContent = f.source_folder;
-        div.addEventListener('click', () => { folderPathInput.value = f.source_folder; });
-        folderListEl.appendChild(div);
-      });
+      // Populate folder list from disk
+      moveFolderListEl.innerHTML = '';
+      if (selectedParent) {
+        try {
+          const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(selectedParent)}`);
+          const dirs = await res.json();
+          dirs.forEach(d => {
+            const div = document.createElement('div');
+            div.className = 'folder-option';
+            div.textContent = d.name;
+            div.addEventListener('click', () => { folderPathInput.value = d.path; });
+            moveFolderListEl.appendChild(div);
+          });
+        } catch (_) {}
+      }
       folderPathInput.value = '';
       folderPickerOverlay.classList.add('active');
     });
@@ -852,17 +1056,8 @@
       updateSelectionUI();
       selectAllCb.checked = false;
       loadPhotos();
-      // Refresh folder list in case new folder appeared
-      const folderRes = await fetch('/api/folders');
-      const newFolders = await folderRes.json();
-      // Re-populate folder select (keep first two options)
-      while (folderSelect.options.length > 2) folderSelect.remove(2);
-      newFolders.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.source_folder;
-        opt.textContent = `${f.source_folder} (${f.count})`;
-        folderSelect.appendChild(opt);
-      });
+      // Refresh child folders in case move created a new folder
+      populateChildFolders();
     });
 
     // --- Add to group ---
@@ -940,7 +1135,6 @@
     });
 
     // Init
-    loadFolders();
     loadGroups();
     loadAllTags();
   </script>
