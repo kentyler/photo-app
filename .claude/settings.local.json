@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(export:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(powershell:*)",
+      "Bash(PGPASSWORD=7297 \"/c/Program Files/PostgreSQL/18/bin/psql.exe\":*)",
+      "Bash(where:*)",
+      "Bash(pip show:*)",
+      "Bash(where cmake:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(C:/Python312/python.exe:*)",
+      "Bash(/dev/null !:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep:*)",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\":*)",
+      "Bash(PGPASSWORD=7297 psql:*)",
+      "Bash(PGPASSWORD=7297 \"C:/Program Files/PostgreSQL/18/bin/psql.exe\":*)",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\":*)",
+      "Bash(tasklist:*)",
+      "Bash(do echo:*)",
+      "Bash(\"C:/Program Files/PostgreSQL/17/bin/psql.exe\":*)",
+      "Bash(read f:*)",
+      "Bash(shuf)"
+    ]
+  }
+}
