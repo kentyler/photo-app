@@ -451,12 +451,14 @@
     }
 
     // Close detail
-    document.getElementById('close-detail').addEventListener('click', () => {
+    document.getElementById('close-detail').addEventListener('click', async () => {
+      await saveCurrentText();
       overlay.classList.remove('active');
       loadPhotos(); // Refresh grid to show updated ratings
     });
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener('click', async (e) => {
       if (e.target === overlay) {
+        await saveCurrentText();
         overlay.classList.remove('active');
         loadPhotos();
       }
@@ -535,15 +537,43 @@
       txtBody.value = photoTexts[txtIndex].body || '';
     }
 
-    document.getElementById('txt-first').addEventListener('click', () => { txtIndex = 0; showCurrentText(); });
-    document.getElementById('txt-back5').addEventListener('click', () => { txtIndex = Math.max(0, txtIndex - 5); showCurrentText(); });
-    document.getElementById('txt-prev').addEventListener('click', () => { txtIndex = Math.max(0, txtIndex - 1); showCurrentText(); });
-    document.getElementById('txt-next').addEventListener('click', () => { txtIndex = Math.min(photoTexts.length - 1, txtIndex + 1); showCurrentText(); });
-    document.getElementById('txt-fwd5').addEventListener('click', () => { txtIndex = Math.min(photoTexts.length - 1, txtIndex + 5); showCurrentText(); });
-    document.getElementById('txt-last').addEventListener('click', () => { txtIndex = photoTexts.length - 1; showCurrentText(); });
+    async function saveCurrentText() {
+      if (!currentPhoto) return;
+      const text = txtBody.value;
+      // Auto-create entry if user typed something but no entry exists yet
+      if (photoTexts.length === 0) {
+        if (!text) return; // nothing to save
+        const res = await fetch(`/api/photo/${currentPhoto.id}/texts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: text })
+        });
+        const entry = await res.json();
+        photoTexts.push(entry);
+        txtIndex = 0;
+        showCurrentText();
+        return;
+      }
+      const entry = photoTexts[txtIndex];
+      if (text === (entry.body || '')) return; // no change
+      await fetch(`/api/text/${entry.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text })
+      });
+      entry.body = text;
+    }
+
+    document.getElementById('txt-first').addEventListener('click', async () => { await saveCurrentText(); txtIndex = 0; showCurrentText(); });
+    document.getElementById('txt-back5').addEventListener('click', async () => { await saveCurrentText(); txtIndex = Math.max(0, txtIndex - 5); showCurrentText(); });
+    document.getElementById('txt-prev').addEventListener('click', async () => { await saveCurrentText(); txtIndex = Math.max(0, txtIndex - 1); showCurrentText(); });
+    document.getElementById('txt-next').addEventListener('click', async () => { await saveCurrentText(); txtIndex = Math.min(photoTexts.length - 1, txtIndex + 1); showCurrentText(); });
+    document.getElementById('txt-fwd5').addEventListener('click', async () => { await saveCurrentText(); txtIndex = Math.min(photoTexts.length - 1, txtIndex + 5); showCurrentText(); });
+    document.getElementById('txt-last').addEventListener('click', async () => { await saveCurrentText(); txtIndex = photoTexts.length - 1; showCurrentText(); });
 
     document.getElementById('txt-new').addEventListener('click', async () => {
       if (!currentPhoto) return;
+      await saveCurrentText();
       const res = await fetch(`/api/photo/${currentPhoto.id}/texts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -556,16 +586,7 @@
       txtBody.focus();
     });
 
-    document.getElementById('txt-save').addEventListener('click', async () => {
-      if (photoTexts.length === 0 || !currentPhoto) return;
-      const entry = photoTexts[txtIndex];
-      await fetch(`/api/text/${entry.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: txtBody.value })
-      });
-      entry.body = txtBody.value;
-    });
+    document.getElementById('txt-save').addEventListener('click', saveCurrentText);
 
     document.getElementById('txt-delete').addEventListener('click', async () => {
       if (photoTexts.length === 0 || !currentPhoto) return;
