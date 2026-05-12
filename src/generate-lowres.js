@@ -5,8 +5,8 @@ const sharp = require('sharp');
 const { scanFolder } = require('./scan-orchestrator');
 const { fileHash } = require('./file-hash');
 
-const LOWRES_ROOT = 'D:/b_copies/lowres/Frances_Oliveira_and_Family';
-const VIDEO_ROOT = 'D:/b_copies/videos';
+const DEFAULT_LOWRES_ROOT = 'D:/b_copies/lowres/Frances_Oliveira_and_Family';
+const DEFAULT_VIDEO_ROOT = 'D:/b_copies/videos';
 const MAX_DIM = 3840;
 const JPEG_QUALITY = 95;
 
@@ -28,7 +28,7 @@ function buildOutputPath(originalPath, driveRoot, outputRoot) {
   return `${outputRoot}/${prefix}/${baseName}`;
 }
 
-function buildVideoOutputPath(originalPath, driveRoot) {
+function buildVideoOutputPath(originalPath, driveRoot, videoRoot) {
   const normalized = originalPath.replace(/\\/g, '/');
   let root = driveRoot.replace(/\\/g, '/');
   if (!root.endsWith('/')) root += '/';
@@ -39,7 +39,7 @@ function buildVideoOutputPath(originalPath, driveRoot) {
   const rest = relative.split('/').slice(1).join('/');
 
   const prefix = `${driveLetter}_${firstFolder}`;
-  return `${VIDEO_ROOT}/${prefix}/${rest}`;
+  return `${videoRoot}/${prefix}/${rest}`;
 }
 
 async function ensureDir(filePath) {
@@ -47,7 +47,9 @@ async function ensureDir(filePath) {
   await fs.promises.mkdir(dir, { recursive: true });
 }
 
-async function generateLowres(pool, driveRoot, folderFilter) {
+async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
+  const LOWRES_ROOT = opts.lowresRoot || DEFAULT_LOWRES_ROOT;
+  const VIDEO_ROOT = opts.videoRoot || DEFAULT_VIDEO_ROOT;
   let root = driveRoot.replace(/\\/g, '/');
   if (!root.endsWith('/')) root += '/';
 
@@ -69,8 +71,14 @@ async function generateLowres(pool, driveRoot, folderFilter) {
   const params = [root + '%'];
 
   if (folderFilter) {
-    whereClause += ` AND source_folder = $2`;
-    params.push(folderFilter);
+    if (folderFilter.includes('/')) {
+      // Nested folder: match by original_path prefix
+      whereClause += ` AND original_path LIKE $2`;
+      params.push(root + folderFilter + '/%');
+    } else {
+      whereClause += ` AND source_folder = $2`;
+      params.push(folderFilter);
+    }
   }
 
   const { rows: originals } = await pool.query(
@@ -124,7 +132,7 @@ async function generateLowres(pool, driveRoot, folderFilter) {
         process.stderr.write(`  [${processed}/${originals.length}] ERROR: ${path.basename(row.original_path)}: ${err.message}\n`);
       }
     } else if (VIDEO_EXTS.has(ext)) {
-      const outputPath = buildVideoOutputPath(row.original_path, root);
+      const outputPath = buildVideoOutputPath(row.original_path, root, VIDEO_ROOT);
 
       if (fs.existsSync(outputPath)) {
         skipped++;
@@ -164,7 +172,7 @@ async function generateLowres(pool, driveRoot, folderFilter) {
     if (PHOTO_EXTS.has(ext)) {
       outputPath = buildOutputPath(row.original_path, root, LOWRES_ROOT);
     } else if (VIDEO_EXTS.has(ext)) {
-      outputPath = buildVideoOutputPath(row.original_path, root);
+      outputPath = buildVideoOutputPath(row.original_path, root, VIDEO_ROOT);
     } else {
       continue;
     }
@@ -189,8 +197,8 @@ async function generateLowres(pool, driveRoot, folderFilter) {
         const meta = await sharp(outputPath).metadata();
         await pool.query(
           `INSERT INTO catalog.files
-             (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, width, height, parent_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+             (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, width, height, parent_id, variant_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'lowres')`,
           [
             outputPath.replace(/\\/g, '/'),
             sourcePrefix,
@@ -208,8 +216,8 @@ async function generateLowres(pool, driveRoot, folderFilter) {
         const outExt = path.extname(outputPath).replace('.', '').toLowerCase();
         await pool.query(
           `INSERT INTO catalog.files
-             (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, parent_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+             (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, parent_id, variant_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'lowres')`,
           [
             outputPath.replace(/\\/g, '/'),
             sourcePrefix,
@@ -260,16 +268,23 @@ if (require.main === module) {
     folderFilter = args[folderIdx + 1];
   }
 
+  // Parse --dest flag (lowres destination folder)
+  let lowresRoot = DEFAULT_LOWRES_ROOT;
+  const destIdx = args.indexOf('--dest');
+  if (destIdx !== -1) {
+    lowresRoot = args[destIdx + 1].replace(/\\/g, '/');
+  }
+
   if (!driveRoot) {
-    console.error('Usage: node src/generate-lowres.js <drive-root> [--folder <folder-name>]');
+    console.error('Usage: node src/generate-lowres.js <drive-root> [--folder <name>] [--dest <lowres-root>]');
     console.error('  e.g.: node src/generate-lowres.js H:/');
-    console.error('  e.g.: node src/generate-lowres.js H:/ --folder Dad_AuntVisNegatives');
+    console.error('  e.g.: node src/generate-lowres.js F:/ --folder Bridget --dest D:/b_copies/lowres/KenAndConnie');
     process.exit(1);
   }
 
   const pool = new Pool({ host: 'localhost', user: 'postgres', password: '7297', database: 'photoapp' });
 
-  generateLowres(pool, driveRoot, folderFilter)
+  generateLowres(pool, driveRoot, folderFilter, { lowresRoot })
     .then(() => pool.end())
     .catch(err => {
       console.error('Fatal error:', err);

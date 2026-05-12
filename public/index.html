@@ -17,15 +17,7 @@
     #folder-btn { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; cursor: pointer; min-width: 200px; text-align: left; white-space: nowrap; }
     #folder-btn:hover { background: #533483; }
     #folder-btn::after { content: ' \25BE'; }
-    #folder-list { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; max-height: 60vh; overflow-y: scroll; background: #16213e; border: 1px solid #533483; border-radius: 4px; z-index: 50; margin-top: 2px; }
-    #folder-list::-webkit-scrollbar { width: 10px; }
-    #folder-list::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
-    #folder-list::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
-    #folder-list::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
-    #folder-list.open { display: block; }
-    #folder-list .fd-item { padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap; border-bottom: 1px solid #0f3460; }
-    #folder-list .fd-item:hover { background: #533483; }
-    #folder-list .fd-item.active { background: #533483; font-weight: 600; }
+    /* (folder-list styles are in the tree dropdown section below) */
     #filter-rating { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
     #filter-tag { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
     .photo-count { font-size: 0.85rem; color: #aaa; margin-left: auto; }
@@ -43,8 +35,22 @@
 
     /* Detail modal */
     #detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; overflow-y: auto; }
-    #detail-overlay.active { display: flex; justify-content: center; align-items: flex-start; padding: 2rem; }
+    #detail-overlay.active { display: flex; justify-content: center; align-items: flex-start; padding: 2rem; gap: 1rem; }
     #detail-panel { background: #16213e; border-radius: 8px; max-width: 900px; width: 100%; padding: 1.5rem; }
+    #people-sidebar { background: #16213e; border-radius: 8px; width: 240px; min-width: 240px; padding: 1rem; position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; }
+    #people-sidebar h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: #aaa; }
+    .people-list { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .people-list .person-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: #0f3460; border-radius: 4px; font-size: 0.85rem; }
+    .people-list .person-row button { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 0.9rem; padding: 0 0.3rem; }
+    .people-list .person-row button:hover { color: #e74c3c; }
+    .sidebar-combo { position: relative; }
+    .sidebar-combo input { width: 100%; padding: 0.3rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.8rem; }
+    .sidebar-combo .combo-matches { position: absolute; left: 0; right: 0; top: 100%; background: #0f3460; border: 1px solid #533483; border-top: none; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 10; display: none; }
+    .sidebar-combo .combo-matches.open { display: block; }
+    .sidebar-combo .combo-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; }
+    .sidebar-combo .combo-match:hover { background: #533483; }
+    .sidebar-combo .combo-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
+    .sidebar-combo .combo-create:hover { background: #533483; }
     #detail-panel img { max-width: 100%; max-height: 512px; object-fit: contain; display: block; margin: 0 auto 1rem; border-radius: 4px; }
     #detail-panel h3 { margin-bottom: 1rem; font-size: 1rem; color: #aaa; }
 
@@ -71,8 +77,12 @@
     .tag-input-row button { padding: 0.4rem 0.8rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
 
     /* Close button */
-    .close-btn { position: absolute; top: 1rem; right: 1.5rem; font-size: 1.5rem; cursor: pointer; color: #aaa; background: none; border: none; }
-    .close-btn:hover { color: #fff; }
+    .detail-nav { position: absolute; top: 0.75rem; right: 1rem; display: flex; gap: 0.3rem; }
+    .detail-nav button { padding: 0.3rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .detail-nav button:hover { background: #533483; }
+    .detail-nav-bottom { display: flex; justify-content: center; gap: 0.4rem; margin: 1rem auto 0; }
+    .detail-nav-bottom button { padding: 0.4rem 1.2rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+    .detail-nav-bottom button:hover { background: #533483; }
 
     /* Lightbox */
     #lightbox { display: none; position: fixed; inset: 0; background: #000; z-index: 200; user-select: none; }
@@ -84,7 +94,13 @@
     .lb-next { right: 1rem; }
     .lb-close { position: absolute; top: 1rem; right: 1.5rem; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; z-index: 201; }
     .lb-close:hover { color: #ccc; }
+
+    /* Context menu */
+    #ctx-menu { display: none; position: fixed; z-index: 300; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.3rem 0; box-shadow: 0 4px 16px rgba(0,0,0,0.5); min-width: 150px; }
+    #ctx-menu button { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: #eee; font-size: 0.85rem; text-align: left; cursor: pointer; }
+    #ctx-menu button:hover { background: #533483; }
     .lb-counter { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); color: #aaa; font-size: 0.9rem; }
+    .lb-filesize { position: absolute; bottom: 1rem; right: 1.5rem; color: #aaa; font-size: 0.85rem; }
 
     /* Multi-select checkbox */
     .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: #533483; cursor: pointer; z-index: 10; }
@@ -112,6 +128,9 @@
     .texts-section .texts-actions button:hover { background: #6c44a0; }
     .texts-section .texts-actions button.danger { background: #c0392b; }
     .texts-section .texts-actions button.danger:hover { background: #e74c3c; }
+    #txt-mic { font-size: 1.1rem; padding: 0.4rem 0.7rem; }
+    #txt-mic.recording { background: #c0392b; animation: mic-pulse 1s ease-in-out infinite; }
+    @keyframes mic-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     /* File-ops section in detail */
     .fileops-section { margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -149,44 +168,35 @@
     #group-picker-dialog .btn-cancel { background: #333; color: #eee; }
     .header-sep { color: #533483; font-size: 0.9rem; }
 
-    /* Folder picker button */
-    #pick-parent-btn { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
-    #pick-parent-btn:hover { background: #533483; }
-
-    /* Folder picker modal */
-    #folder-picker-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
-    #folder-picker-modal.active { display: flex; }
-    #folder-picker-modal .fp-panel { background: #16213e; border-radius: 8px; width: 500px; max-height: 70vh; display: flex; flex-direction: column; padding: 1rem; }
-    #folder-picker-modal h3 { margin-bottom: 0.75rem; font-size: 1rem; }
-    #fp-search { width: 100%; padding: 0.4rem 0.6rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.9rem; }
-    #fp-list { flex: 1; overflow-y: scroll; min-height: 0; border: 1px solid #0f3460; border-radius: 4px; }
-    #fp-list::-webkit-scrollbar { width: 10px; }
-    #fp-list::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
-    #fp-list::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
-    #fp-list::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
-    #fp-list .fp-item { padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #0f3460; display: flex; align-items: center; gap: 0.4rem; }
-    #fp-list .fp-item:hover { background: #533483; }
-    #fp-list .fp-item.selected { background: #533483; font-weight: 600; }
-    #fp-list .fp-count { color: #aaa; font-size: 0.8rem; margin-left: 0.5rem; }
-    #fp-list .fp-arrow { color: #aaa; font-size: 0.7rem; margin-left: auto; }
-    #fp-breadcrumb { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-bottom: 0.5rem; align-items: center; font-size: 0.85rem; }
-    #fp-breadcrumb .fp-crumb { color: #8e94f2; cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 3px; }
-    #fp-breadcrumb .fp-crumb:hover { background: #533483; }
-    #fp-breadcrumb .fp-sep { color: #555; }
-    .fp-btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
-    .fp-btn-row button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    .fp-btn-select { background: #533483; color: #fff; }
-    .fp-btn-select:hover { background: #6c44a0; }
-    .fp-btn-cancel { background: #333; color: #eee; }
+    /* Folder tree dropdown */
+    #folder-list { display: none; position: absolute; top: 100%; left: 0; width: 400px; max-height: 60vh; background: #16213e; border: 1px solid #533483; border-radius: 4px; z-index: 50; margin-top: 2px; overflow: hidden; display: none; flex-direction: column; }
+    #folder-list.open { display: flex; }
+    #folder-list .fl-breadcrumb { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.4rem 0.6rem; align-items: center; font-size: 0.8rem; border-bottom: 1px solid #0f3460; }
+    #folder-list .fl-crumb { color: #8e94f2; cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    #folder-list .fl-crumb:hover { background: #533483; }
+    #folder-list .fl-sep { color: #555; }
+    #folder-list .fl-items { flex: 1; overflow-y: auto; min-height: 0; }
+    #folder-list .fl-items::-webkit-scrollbar { width: 10px; }
+    #folder-list .fl-items::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
+    #folder-list .fl-items::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
+    #folder-list .fl-items::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
+    #folder-list .fl-item { display: flex; align-items: center; border-bottom: 1px solid #0f3460; }
+    #folder-list .fl-name { flex: 1; padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #folder-list .fl-name:hover { background: #533483; }
+    #folder-list .fl-name.active { background: #533483; font-weight: 600; }
+    #folder-list .fl-drill { padding: 0.4rem 0.6rem; cursor: pointer; color: #aaa; font-size: 0.75rem; }
+    #folder-list .fl-drill:hover { background: #533483; color: #fff; }
   </style>
 </head>
 <body>
   <header>
     <h1>Photo Triage</h1>
-    <button id="pick-parent-btn" title="Choose parent folder">📁 Pick folder...</button>
     <div id="folder-dropdown">
       <button id="folder-btn">-- Folder --</button>
-      <div id="folder-list"></div>
+      <div id="folder-list">
+        <div class="fl-breadcrumb" id="fl-breadcrumb"></div>
+        <div class="fl-items" id="fl-items"></div>
+      </div>
     </div>
     <span class="header-sep">|</span>
     <select id="group-select"><option value="">-- Select group --</option></select>
@@ -208,9 +218,14 @@
 
   <div id="detail-overlay">
     <div id="detail-panel" style="position:relative;">
-      <button class="close-btn" id="close-detail">&times;</button>
+      <div class="detail-nav">
+        <button id="detail-prev">&lt; Prev</button>
+        <button id="close-detail">Close</button>
+        <button id="detail-next">Next &gt;</button>
+      </div>
       <img id="detail-img" src="" alt="">
       <h3 id="detail-filename"></h3>
+      <div id="detail-filesize" style="font-size:0.85rem;color:#aaa;margin-bottom:1rem;"></div>
 
       <div class="caption-section">
         <textarea id="caption-input" placeholder="Add a caption..."></textarea>
@@ -242,6 +257,7 @@
         <textarea id="txt-body" placeholder="Text entry..."></textarea>
         <div class="texts-actions">
           <button id="txt-save">Save</button>
+          <button id="txt-mic" title="Voice transcription">&#x1F399;</button>
         </div>
       </div>
 
@@ -260,6 +276,35 @@
         <button id="btn-resize-screen">Resize (Screen)</button>
         <button id="btn-resize-both">Resize (Both)</button>
         <div class="status-msg" id="fileops-status"></div>
+      </div>
+      <div class="detail-nav-bottom">
+        <button id="detail-prev-bottom">&lt; Prev</button>
+        <button id="close-detail-bottom">Close</button>
+        <button id="detail-next-bottom">Next &gt;</button>
+      </div>
+    </div>
+    <div id="people-sidebar">
+      <h4>People in Photo</h4>
+      <div class="people-list" id="people-list"></div>
+      <div class="sidebar-combo" id="people-combo">
+        <input placeholder="Type name to add..." id="people-input">
+        <div class="combo-matches" id="people-matches"></div>
+      </div>
+
+      <hr style="border-color:#533483;margin:1rem 0;">
+      <h4>Places</h4>
+      <div class="people-list" id="places-list"></div>
+      <div class="sidebar-combo" id="places-combo">
+        <input placeholder="Type place to add..." id="places-input">
+        <div class="combo-matches" id="places-matches"></div>
+      </div>
+
+      <hr style="border-color:#533483;margin:1rem 0;">
+      <h4>Things</h4>
+      <div class="people-list" id="things-list"></div>
+      <div class="sidebar-combo" id="things-combo">
+        <input placeholder="Type thing to add..." id="things-input">
+        <div class="combo-matches" id="things-matches"></div>
       </div>
     </div>
   </div>
@@ -305,29 +350,24 @@
     <img id="lb-img" src="" alt="">
     <button class="lb-nav lb-next" id="lb-next">&#8250;</button>
     <div class="lb-counter" id="lb-counter"></div>
+    <div class="lb-filesize" id="lb-filesize"></div>
   </div>
 
-  <div id="folder-picker-modal">
-    <div class="fp-panel">
-      <h3>Browse folders</h3>
-      <div id="fp-breadcrumb"></div>
-      <div id="fp-list"></div>
-      <div class="fp-btn-row">
-        <button class="fp-btn-cancel" id="fp-cancel">Cancel</button>
-        <button class="fp-btn-select" id="fp-select">Select this folder</button>
-      </div>
-    </div>
+
+  <div id="ctx-menu">
+    <button id="ctx-rotate-right">Rotate right</button>
+    <button id="ctx-rotate-left">Rotate left</button>
+    <button id="ctx-hide">Hide (x_ prefix)</button>
   </div>
 
   <script>
     const grid = document.getElementById('photo-grid');
-    const pickParentBtn = document.getElementById('pick-parent-btn');
     const folderBtn = document.getElementById('folder-btn');
     const folderList = document.getElementById('folder-list');
+    const flBreadcrumb = document.getElementById('fl-breadcrumb');
+    const flItems = document.getElementById('fl-items');
     let selectedFolder = ''; // disk path of chosen folder
-    const fpModal = document.getElementById('folder-picker-modal');
-    const fpBreadcrumb = document.getElementById('fp-breadcrumb');
-    const fpList = document.getElementById('fp-list');
+    let flBrowsePath = 'D:/'; // current browsing path in tree dropdown
     const groupSelect = document.getElementById('group-select');
     const filterRating = document.getElementById('filter-rating');
     const filterTag = document.getElementById('filter-tag');
@@ -344,98 +384,83 @@
     let allTags = [];
     let currentPhoto = null;
     let activeSource = null; // 'folder', 'group', or 'disk'
-    let selectedParent = ''; // chosen parent disk path
-    let fpBrowsePath = ''; // current path being browsed in folder picker
 
-    // --- Filesystem-driven folder picker ---
-    pickParentBtn.addEventListener('click', () => {
-      fpBrowsePath = selectedParent || 'D:/';
-      fpModal.classList.add('active');
-      renderFpBrowser();
+    // --- Folder tree dropdown ---
+    folderBtn.addEventListener('click', () => {
+      if (folderList.classList.contains('open')) {
+        folderList.classList.remove('open');
+      } else {
+        folderList.classList.add('open');
+        renderFolderTree();
+      }
     });
 
-    document.getElementById('fp-cancel').addEventListener('click', () => {
-      fpModal.classList.remove('active');
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#folder-dropdown')) folderList.classList.remove('open');
     });
 
-    fpModal.addEventListener('click', (e) => {
-      if (e.target === fpModal) fpModal.classList.remove('active');
-    });
-
-    document.getElementById('fp-select').addEventListener('click', () => {
-      selectedParent = fpBrowsePath;
-      pickParentBtn.textContent = '\u{1F4C1} ' + selectedParent;
-      fpModal.classList.remove('active');
-      populateChildFolders();
-    });
-
-    function renderFpBreadcrumb() {
-      fpBreadcrumb.innerHTML = '';
-      if (!fpBrowsePath) return;
-      const parts = fpBrowsePath.split('/');
+    function renderFlBreadcrumb() {
+      flBreadcrumb.innerHTML = '';
+      const parts = flBrowsePath.split('/');
       parts.forEach((part, i) => {
         if (i > 0) {
           const sep = document.createElement('span');
-          sep.className = 'fp-sep';
+          sep.className = 'fl-sep';
           sep.textContent = '/';
-          fpBreadcrumb.appendChild(sep);
+          flBreadcrumb.appendChild(sep);
         }
         const crumb = document.createElement('span');
-        crumb.className = 'fp-crumb';
+        crumb.className = 'fl-crumb';
         crumb.textContent = part || '/';
         const ancestorPath = parts.slice(0, i + 1).join('/');
-        crumb.addEventListener('click', () => {
-          fpBrowsePath = ancestorPath;
-          renderFpBrowser();
+        crumb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          flBrowsePath = ancestorPath;
+          renderFolderTree();
         });
-        fpBreadcrumb.appendChild(crumb);
+        flBreadcrumb.appendChild(crumb);
       });
     }
 
-    async function renderFpBrowser() {
-      renderFpBreadcrumb();
-      fpList.innerHTML = '<div class="fp-item" style="color:#aaa;">Loading...</div>';
+    async function renderFolderTree() {
+      renderFlBreadcrumb();
+      flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:#aaa;font-size:0.85rem;">Loading...</div>';
       try {
-        const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(fpBrowsePath)}`);
+        const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(flBrowsePath)}`);
         const dirs = await res.json();
-        fpList.innerHTML = '';
+        flItems.innerHTML = '';
         if (dirs.length === 0) {
-          fpList.innerHTML = '<div class="fp-item" style="color:#aaa;">(no subdirectories)</div>';
+          flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:#aaa;font-size:0.85rem;">(no subdirectories)</div>';
           return;
         }
         dirs.forEach(d => {
-          const item = document.createElement('div');
-          item.className = 'fp-item';
-          item.innerHTML = `<span>${d.name}</span>${d.hasSubdirs ? '<span class="fp-arrow">&#9654;</span>' : ''}`;
-          item.addEventListener('click', () => {
-            fpBrowsePath = d.path;
-            renderFpBrowser();
+          const row = document.createElement('div');
+          row.className = 'fl-item';
+          const name = document.createElement('span');
+          name.className = 'fl-name' + (d.path === selectedFolder ? ' active' : '');
+          name.textContent = d.name;
+          name.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectFolder(d.path, d.name);
           });
-          fpList.appendChild(item);
+          row.appendChild(name);
+          if (d.hasSubdirs) {
+            const drill = document.createElement('span');
+            drill.className = 'fl-drill';
+            drill.innerHTML = '&#9654;';
+            drill.title = 'Browse subfolders';
+            drill.addEventListener('click', (e) => {
+              e.stopPropagation();
+              flBrowsePath = d.path;
+              renderFolderTree();
+            });
+            row.appendChild(drill);
+          }
+          flItems.appendChild(row);
         });
       } catch (err) {
-        fpList.innerHTML = `<div class="fp-item" style="color:#c0392b;">Error: ${err.message}</div>`;
+        flItems.innerHTML = `<div style="padding:0.5rem 0.75rem;color:#c0392b;font-size:0.85rem;">Error: ${err.message}</div>`;
       }
-    }
-
-    // Populate folder dropdown with disk subdirectories of selectedParent
-    async function populateChildFolders() {
-      folderList.innerHTML = '';
-      selectedFolder = '';
-      folderBtn.textContent = '-- Folder --';
-      if (!selectedParent) return;
-
-      try {
-        const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(selectedParent)}`);
-        const dirs = await res.json();
-        dirs.forEach(d => {
-          const item = document.createElement('div');
-          item.className = 'fd-item';
-          item.textContent = d.name;
-          item.addEventListener('click', () => selectFolder(d.path, d.name));
-          folderList.appendChild(item);
-        });
-      } catch (_) {}
     }
 
     function selectFolder(diskPath, label) {
@@ -446,14 +471,6 @@
       groupSelect.value = '';
       loadPhotos();
     }
-
-    folderBtn.addEventListener('click', () => {
-      folderList.classList.toggle('open');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#folder-dropdown')) folderList.classList.remove('open');
-    });
 
     // Load groups
     async function loadGroups() {
@@ -601,6 +618,7 @@
           e.stopPropagation();
           if (p.id) toggleSelect(p.id, card, cb);
         });
+        card.querySelector('img').addEventListener('contextmenu', (e) => showCtxMenu(e, p));
         card.addEventListener('click', (e) => {
           if (e.target === cb) return;
           openDetail(p);
@@ -615,6 +633,12 @@
       currentPhoto = photo;
       detailImg.src = photoImgSrc(photo);
       detailFilename.textContent = photo.filename;
+      const detailFilesize = document.getElementById('detail-filesize');
+      detailFilesize.textContent = '';
+      const fsq = photo.id ? `id=${photo.id}` : `path=${encodeURIComponent(photo.disk_path)}`;
+      fetch(`/api/file-size?${fsq}`).then(r => r.json()).then(d => {
+        if (currentPhoto === photo && d.size) detailFilesize.textContent = formatFileSize(d.size);
+      }).catch(() => {});
       overlay.classList.add('active');
 
       if (photo.id) {
@@ -626,10 +650,14 @@
         await loadPhotoTags();
         // Load text entries
         await loadPhotoTexts();
+        // Load sidebar
+        await loadAllSidebar();
+        loadPhotoPeople(); loadPhotoPlaces(); loadPhotoThings();
       } else {
         captionInput.value = photo.caption || '';
         detailTags.innerHTML = '<span style="color:#aaa;font-size:0.8rem;">Not in database (no hash match yet)</span>';
         photoTexts = []; txtIndex = 0; showCurrentText();
+        peopleList.innerHTML = ''; placesList.innerHTML = ''; thingsList.innerHTML = '';
       }
 
       // Set active rating button
@@ -656,12 +684,29 @@
     }
 
     // Close detail
-    document.getElementById('close-detail').addEventListener('click', async () => {
+    async function closeDetail() {
       await saveCurrentText();
       overlay.classList.remove('active');
       // Don't reload disk photos on close (avoid re-hashing), just re-render
       renderGrid();
-    });
+    }
+    document.getElementById('close-detail').addEventListener('click', closeDetail);
+    document.getElementById('close-detail-bottom').addEventListener('click', closeDetail);
+
+    // Prev/next in detail view
+    async function detailNav(dir) {
+      await saveCurrentText();
+      const list = getCurrentFilteredList();
+      const idx = list.findIndex(p => p === currentPhoto || (p.id && p.id === currentPhoto.id));
+      if (idx < 0) return;
+      const next = idx + dir;
+      if (next < 0 || next >= list.length) return;
+      openDetail(list[next]);
+    }
+    document.getElementById('detail-prev').addEventListener('click', () => detailNav(-1));
+    document.getElementById('detail-next').addEventListener('click', () => detailNav(1));
+    document.getElementById('detail-prev-bottom').addEventListener('click', () => detailNav(-1));
+    document.getElementById('detail-next-bottom').addEventListener('click', () => detailNav(1));
     overlay.addEventListener('click', async (e) => {
       if (e.target === overlay) {
         await saveCurrentText();
@@ -669,6 +714,156 @@
         renderGrid();
       }
     });
+
+    // --- Sidebar combo helper ---
+    // Reusable: builds a type-ahead combo for people/places/things
+    function setupSidebarCombo({ inputId, matchesId, listId, allItemsFn, loadPhotoItemsFn,
+                                  fetchAllUrl, createUrl, photoLinkUrl, idKey }) {
+      const input = document.getElementById(inputId);
+      const matchesEl = document.getElementById(matchesId);
+      const listEl = document.getElementById(listId);
+
+      function renderMatches() {
+        const q = input.value.trim().toLowerCase();
+        matchesEl.innerHTML = '';
+        if (!q) { matchesEl.classList.remove('open'); return; }
+        const hits = allItemsFn().filter(item => item.name.toLowerCase().includes(q));
+        hits.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'combo-match';
+          div.textContent = item.name;
+          div.addEventListener('mousedown', async (e) => {
+            e.preventDefault();
+            if (!currentPhoto || !currentPhoto.id) return;
+            await fetch(photoLinkUrl(currentPhoto.id), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [idKey]: item.id })
+            });
+            input.value = '';
+            matchesEl.classList.remove('open');
+            loadPhotoItemsFn();
+          });
+          matchesEl.appendChild(div);
+        });
+        // "Create" option if no exact match
+        const exact = hits.some(item => item.name.toLowerCase() === q);
+        if (!exact) {
+          const div = document.createElement('div');
+          div.className = 'combo-create';
+          div.textContent = `+ Create "${input.value.trim()}"`;
+          div.addEventListener('mousedown', async (e) => {
+            e.preventDefault();
+            if (!currentPhoto || !currentPhoto.id) return;
+            const res = await fetch(createUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: input.value.trim() })
+            });
+            const created = await res.json();
+            await fetch(photoLinkUrl(currentPhoto.id), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [idKey]: created.id })
+            });
+            input.value = '';
+            matchesEl.classList.remove('open');
+            await loadAllSidebar();
+            loadPhotoItemsFn();
+          });
+          matchesEl.appendChild(div);
+        }
+        matchesEl.classList.add('open');
+      }
+
+      input.addEventListener('input', renderMatches);
+      input.addEventListener('focus', renderMatches);
+      input.addEventListener('blur', () => { matchesEl.classList.remove('open'); });
+
+      return { listEl };
+    }
+
+    // --- People ---
+    const peopleList = document.getElementById('people-list');
+    let allPeople = [];
+    async function loadAllPeople() { allPeople = await (await fetch('/api/people')).json(); }
+    async function loadPhotoPeople() {
+      peopleList.innerHTML = '';
+      if (!currentPhoto || !currentPhoto.id) return;
+      const people = await (await fetch(`/api/photo/${currentPhoto.id}/people`)).json();
+      people.forEach(pp => {
+        const row = document.createElement('div');
+        row.className = 'person-row';
+        row.innerHTML = `<span>${pp.name}</span><button title="Remove">&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/photo-people/${pp.id}`, { method: 'DELETE' });
+          loadPhotoPeople();
+        });
+        peopleList.appendChild(row);
+      });
+    }
+    setupSidebarCombo({
+      inputId: 'people-input', matchesId: 'people-matches', listId: 'people-list',
+      allItemsFn: () => allPeople, loadPhotoItemsFn: loadPhotoPeople,
+      fetchAllUrl: '/api/people', createUrl: '/api/people',
+      photoLinkUrl: id => `/api/photo/${id}/people`, idKey: 'person_id'
+    });
+
+    // --- Places ---
+    const placesList = document.getElementById('places-list');
+    let allPlaces = [];
+    async function loadAllPlaces() { allPlaces = await (await fetch('/api/places')).json(); }
+    async function loadPhotoPlaces() {
+      placesList.innerHTML = '';
+      if (!currentPhoto || !currentPhoto.id) return;
+      const places = await (await fetch(`/api/photo/${currentPhoto.id}/places`)).json();
+      places.forEach(pp => {
+        const row = document.createElement('div');
+        row.className = 'person-row';
+        row.innerHTML = `<span>${pp.name}</span><button title="Remove">&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/photo-places/${pp.id}`, { method: 'DELETE' });
+          loadPhotoPlaces();
+        });
+        placesList.appendChild(row);
+      });
+    }
+    setupSidebarCombo({
+      inputId: 'places-input', matchesId: 'places-matches', listId: 'places-list',
+      allItemsFn: () => allPlaces, loadPhotoItemsFn: loadPhotoPlaces,
+      fetchAllUrl: '/api/places', createUrl: '/api/places',
+      photoLinkUrl: id => `/api/photo/${id}/places`, idKey: 'place_id'
+    });
+
+    // --- Things ---
+    const thingsList = document.getElementById('things-list');
+    let allThings = [];
+    async function loadAllThings() { allThings = await (await fetch('/api/things')).json(); }
+    async function loadPhotoThings() {
+      thingsList.innerHTML = '';
+      if (!currentPhoto || !currentPhoto.id) return;
+      const things = await (await fetch(`/api/photo/${currentPhoto.id}/things`)).json();
+      things.forEach(pt => {
+        const row = document.createElement('div');
+        row.className = 'person-row';
+        row.innerHTML = `<span>${pt.name}</span><button title="Remove">&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/photo-things/${pt.id}`, { method: 'DELETE' });
+          loadPhotoThings();
+        });
+        thingsList.appendChild(row);
+      });
+    }
+    setupSidebarCombo({
+      inputId: 'things-input', matchesId: 'things-matches', listId: 'things-list',
+      allItemsFn: () => allThings, loadPhotoItemsFn: loadPhotoThings,
+      fetchAllUrl: '/api/things', createUrl: '/api/things',
+      photoLinkUrl: id => `/api/photo/${id}/things`, idKey: 'thing_id'
+    });
+
+    async function loadAllSidebar() {
+      await Promise.all([loadAllPeople(), loadAllPlaces(), loadAllThings()]);
+    }
 
     // Save caption
     document.getElementById('save-caption').addEventListener('click', async () => {
@@ -805,6 +1000,54 @@
       showCurrentText();
     });
 
+    // --- Voice transcription (Web Speech API) ---
+    const micBtn = document.getElementById('txt-mic');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      let insertPos = 0;
+
+      micBtn.addEventListener('click', () => {
+        if (micBtn.classList.contains('recording')) {
+          recognition.stop();
+          return;
+        }
+        insertPos = txtBody.selectionStart ?? txtBody.value.length;
+        micBtn.classList.add('recording');
+        micBtn.title = 'Recording... click to stop';
+        recognition.start();
+      });
+
+      recognition.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            const chunk = e.results[i][0].transcript;
+            const val = txtBody.value;
+            txtBody.value = val.slice(0, insertPos) + chunk + val.slice(insertPos);
+            insertPos += chunk.length;
+          }
+        }
+      };
+
+      recognition.onend = () => {
+        micBtn.classList.remove('recording');
+        micBtn.title = 'Voice transcription';
+      };
+
+      recognition.onerror = (e) => {
+        console.warn('Speech recognition error:', e.error);
+        micBtn.classList.remove('recording');
+        micBtn.title = 'Voice transcription';
+      };
+    } else {
+      micBtn.style.display = 'none';
+    }
+
     // Filters -- folder and group are mutually exclusive
     groupSelect.addEventListener('change', () => {
       if (groupSelect.value) {
@@ -823,6 +1066,7 @@
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lb-img');
     const lbCounter = document.getElementById('lb-counter');
+    const lbFilesize = document.getElementById('lb-filesize');
     let lbIndex = 0;
     let lbList = []; // filtered photo list at time of open
 
@@ -844,10 +1088,22 @@
       return filtered;
     }
 
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
     function showLbPhoto() {
       if (lbList.length === 0) return;
-      lbImg.src = photoImgSrc(lbList[lbIndex]);
+      const p = lbList[lbIndex];
+      lbImg.src = photoImgSrc(p);
       lbCounter.textContent = `${lbIndex + 1} / ${lbList.length}`;
+      lbFilesize.textContent = '';
+      const q = p.id ? `id=${p.id}` : `path=${encodeURIComponent(p.disk_path)}`;
+      fetch(`/api/file-size?${q}`).then(r => r.json()).then(d => {
+        if (lbList[lbIndex] === p && d.size) lbFilesize.textContent = formatFileSize(d.size);
+      }).catch(() => {});
     }
 
     function lbNav(dir) {
@@ -858,6 +1114,7 @@
 
     function closeLightbox() {
       lightbox.classList.remove('active');
+      if (currentPhoto) overlay.classList.add('active');
     }
 
     document.getElementById('lb-close').addEventListener('click', closeLightbox);
@@ -881,7 +1138,9 @@
       else if (e.key === 'ArrowRight') lbNav(1);
     });
 
-    // Click background to close
+    // Click lightbox image or background to close back to detail
+    lbImg.style.cursor = 'pointer';
+    lbImg.addEventListener('click', closeLightbox);
     lightbox.addEventListener('click', (e) => {
       if (e.target === lightbox) closeLightbox();
     });
@@ -1020,9 +1279,10 @@
       if (selectedIds.size === 0) return;
       // Populate folder list from disk
       moveFolderListEl.innerHTML = '';
-      if (selectedParent) {
+      if (selectedFolder) {
         try {
-          const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(selectedParent)}`);
+          const parentPath = selectedFolder.replace(/\/[^/]+$/, '') || selectedFolder;
+          const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(parentPath)}`);
           const dirs = await res.json();
           dirs.forEach(d => {
             const div = document.createElement('div');
@@ -1056,8 +1316,7 @@
       updateSelectionUI();
       selectAllCb.checked = false;
       loadPhotos();
-      // Refresh child folders in case move created a new folder
-      populateChildFolders();
+      // Folder tree will refresh on next open
     });
 
     // --- Add to group ---
@@ -1133,6 +1392,97 @@
       selectAllCb.checked = false;
       loadGroups(); // refresh counts
     });
+
+    // --- Context menu (rotate) ---
+    const ctxMenu = document.getElementById('ctx-menu');
+    let ctxPhoto = null;
+
+    function showCtxMenu(e, photo) {
+      e.preventDefault();
+      ctxPhoto = photo;
+      ctxMenu.style.left = e.clientX + 'px';
+      ctxMenu.style.top = e.clientY + 'px';
+      ctxMenu.style.display = 'block';
+    }
+
+    function hideCtxMenu() { ctxMenu.style.display = 'none'; ctxPhoto = null; }
+
+    document.addEventListener('click', hideCtxMenu);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtxMenu(); });
+
+    function isSamePhoto(a, b) {
+      if (a.id && b.id) return a.id === b.id;
+      return a.disk_path && b.disk_path && a.disk_path === b.disk_path;
+    }
+
+    function cacheBustPhoto(photo) {
+      const t = '_t=' + Date.now();
+      const expected = photoImgSrc(photo);
+      const expectedBase = expected.split('?')[0];
+      document.querySelectorAll('.photo-card img, #detail-img, #lb-img').forEach(img => {
+        const curBase = img.getAttribute('src').replace(/[?&]_t=\d+/, '').split('?')[0];
+        if (curBase === expectedBase) {
+          img.src = expected + (expected.includes('?') ? '&' : '?') + t;
+        }
+      });
+    }
+
+    async function rotatePhoto(photo, angle) {
+      const body = photo.id ? { id: photo.id, angle } : { path: photo.disk_path, angle };
+      try {
+        const res = await fetch('/api/rotate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) { console.error('Rotate failed:', data.error); return; }
+        cacheBustPhoto(photo);
+      } catch (err) {
+        console.error('Rotate failed:', err);
+      }
+    }
+
+    document.getElementById('ctx-rotate-right').addEventListener('click', () => {
+      if (ctxPhoto) rotatePhoto(ctxPhoto, 90);
+    });
+    document.getElementById('ctx-rotate-left').addEventListener('click', () => {
+      if (ctxPhoto) rotatePhoto(ctxPhoto, 270);
+    });
+
+    document.getElementById('ctx-hide').addEventListener('click', async () => {
+      if (!ctxPhoto) return;
+      const body = ctxPhoto.id ? { id: ctxPhoto.id } : { path: ctxPhoto.disk_path };
+      try {
+        const res = await fetch('/api/hide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) { console.error('Hide failed:', data.error); return; }
+        // Remove from photos array and re-render
+        const hiddenPhoto = ctxPhoto;
+        photos = photos.filter(p => !isSamePhoto(p, hiddenPhoto));
+        // If in lightbox, navigate to next or close
+        if (lightbox.classList.contains('active')) {
+          lbList = lbList.filter(p => !isSamePhoto(p, hiddenPhoto));
+          if (lbList.length === 0) { closeLightbox(); }
+          else { lbIndex = Math.min(lbIndex, lbList.length - 1); showLbPhoto(); }
+        }
+        // Close detail if showing this photo
+        if (currentPhoto && isSamePhoto(currentPhoto, hiddenPhoto)) {
+          overlay.classList.remove('active');
+        }
+        renderGrid();
+      } catch (err) {
+        console.error('Hide failed:', err);
+      }
+    });
+
+    // Wire context menu on detail and lightbox images
+    detailImg.addEventListener('contextmenu', (e) => { if (currentPhoto) showCtxMenu(e, currentPhoto); });
+    lbImg.addEventListener('contextmenu', (e) => { if (lbList[lbIndex]) showCtxMenu(e, lbList[lbIndex]); });
 
     // Init
     loadGroups();

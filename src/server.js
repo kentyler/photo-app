@@ -27,7 +27,7 @@ app.get('/api/photos', async (req, res) => {
               f.width, f.height, f.caption, f.rating, f.source_folder
        FROM catalog.files f
        JOIN catalog.group_files gf ON gf.file_id = f.id
-       WHERE gf.group_id = $1 AND f.media_type = 'photo'
+       WHERE gf.group_id = $1 AND f.media_type = 'photo' AND f.filename NOT LIKE 'x\\_%'
        ORDER BY f.taken_at ASC NULLS LAST, f.filename ASC`,
       [groupId]
     );
@@ -41,7 +41,7 @@ app.get('/api/photos', async (req, res) => {
       `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
               caption, rating, source_folder
        FROM catalog.files
-       WHERE media_type = 'photo'
+       WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
        ORDER BY taken_at ASC NULLS LAST, filename ASC`
     );
     return res.json(rows);
@@ -51,7 +51,7 @@ app.get('/api/photos', async (req, res) => {
     `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
             caption, rating, source_folder
      FROM catalog.files
-     WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo'
+     WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo' AND filename NOT LIKE 'x\\_%'
      ORDER BY taken_at ASC NULLS LAST, filename ASC`,
     [folder]
   );
@@ -208,7 +208,7 @@ app.delete('/api/text/:textId', async (req, res) => {
 app.get('/api/folders', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT source_folder, COUNT(*) as count
-     FROM catalog.files WHERE media_type = 'photo'
+     FROM catalog.files WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
      GROUP BY source_folder ORDER BY source_folder`
   );
   res.json(rows);
@@ -221,7 +221,7 @@ app.get('/api/folder-tree', async (req, res) => {
        regexp_replace(original_path, '/[^/]+$', '') AS folder_path,
        COUNT(*)::int AS count
      FROM catalog.files
-     WHERE media_type = 'photo'
+     WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
      GROUP BY folder_path
      ORDER BY folder_path`
   );
@@ -357,6 +357,98 @@ app.post('/api/photo/:id/resize', async (req, res) => {
   }
 
   res.json({ ok: true, results, skipped });
+});
+
+// --- API: rotate photo ---
+app.post('/api/rotate', async (req, res) => {
+  const { id, path: diskPath, angle } = req.body;
+  if (![90, 270].includes(angle)) return res.status(400).json({ error: 'angle must be 90 or 270' });
+
+  let filePath;
+  if (id) {
+    const { rows } = await pool.query('SELECT original_path FROM catalog.files WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+    filePath = rows[0].original_path;
+  } else if (diskPath) {
+    filePath = diskPath;
+  } else {
+    return res.status(400).json({ error: 'id or path required' });
+  }
+
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
+
+  try {
+    const buf = await sharp(filePath).rotate(angle).toBuffer();
+    await fs.promises.writeFile(filePath, buf);
+
+    if (id) {
+      const meta = await sharp(filePath).metadata();
+      const hash = await fileHash(filePath);
+      await pool.query(
+        'UPDATE catalog.files SET width = $1, height = $2, file_hash = $3 WHERE id = $4',
+        [meta.width, meta.height, hash, id]
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- API: hide photo (x_ prefix) ---
+app.post('/api/hide', async (req, res) => {
+  const { id, path: diskPath } = req.body;
+
+  let filePath, filename;
+  if (id) {
+    const { rows } = await pool.query('SELECT original_path, filename FROM catalog.files WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+    filePath = rows[0].original_path;
+    filename = rows[0].filename;
+  } else if (diskPath) {
+    filePath = diskPath;
+    filename = path.basename(diskPath);
+  } else {
+    return res.status(400).json({ error: 'id or path required' });
+  }
+
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
+  if (filename.startsWith('x_')) return res.json({ ok: true, already: true });
+
+  const dir = path.dirname(filePath);
+  const newFilename = 'x_' + filename;
+  const newPath = path.join(dir, newFilename);
+
+  fs.renameSync(filePath, newPath);
+  if (id) {
+    await pool.query(
+      'UPDATE catalog.files SET original_path = $1, filename = $2 WHERE id = $3',
+      [newPath, newFilename, id]
+    );
+  }
+  res.json({ ok: true });
+});
+
+// --- API: file size ---
+app.get('/api/file-size', async (req, res) => {
+  const { id, path: diskPath } = req.query;
+  let filePath;
+  if (id) {
+    const { rows } = await pool.query('SELECT original_path FROM catalog.files WHERE id = $1', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+    filePath = rows[0].original_path;
+  } else if (diskPath) {
+    filePath = diskPath;
+  } else {
+    return res.status(400).json({ error: 'id or path required' });
+  }
+  try {
+    const stat = await fs.promises.stat(filePath);
+    res.json({ size: stat.size });
+  } catch {
+    res.status(404).json({ error: 'file not found' });
+  }
 });
 
 // --- API: list variants for a photo ---
@@ -515,6 +607,7 @@ app.get('/api/disk-photos', async (req, res) => {
     const photos = [];
     for (const e of entries) {
       if (!e.isFile()) continue;
+      if (e.name.startsWith('x_')) continue;
       const ext = path.extname(e.name).toLowerCase().replace('.', '');
       if (!PHOTO_EXTS.has(ext)) continue;
       const full = path.join(dirPath, e.name).replace(/\\/g, '/');
@@ -535,6 +628,7 @@ app.get('/api/disk-photos/match', async (req, res) => {
     const results = [];
     for (const e of entries) {
       if (!e.isFile()) continue;
+      if (e.name.startsWith('x_')) continue;
       const ext = path.extname(e.name).toLowerCase().replace('.', '');
       if (!PHOTO_EXTS.has(ext)) continue;
       const full = path.join(dirPath, e.name).replace(/\\/g, '/');
@@ -575,6 +669,183 @@ app.get('/api/disk-photo', (req, res) => {
     res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
     fs.createReadStream(filePath).pipe(res);
   }
+});
+
+// --- People / Genealogy ---
+app.get('/api/people', async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM catalog.people ORDER BY name');
+  res.json(rows);
+});
+
+app.post('/api/people', async (req, res) => {
+  const { name, birth_date, death_date, gender, notes } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.people (name, birth_date, death_date, gender, notes) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [name, birth_date || null, death_date || null, gender || null, notes || null]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/people/:id', async (req, res) => {
+  const { name, birth_date, death_date, gender, notes } = req.body;
+  const { rows } = await pool.query(
+    'UPDATE catalog.people SET name=$1, birth_date=$2, death_date=$3, gender=$4, notes=$5 WHERE id=$6 RETURNING *',
+    [name, birth_date || null, death_date || null, gender || null, notes || null, req.params.id]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/people/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.people WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Relationships ---
+app.get('/api/people/:id/relationships', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT r.*, p.name AS related_name FROM catalog.relationships r
+     JOIN catalog.people p ON p.id = CASE WHEN r.person_id = $1 THEN r.related_id ELSE r.person_id END
+     WHERE r.person_id = $1 OR r.related_id = $1
+     ORDER BY r.type, p.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/relationships', async (req, res) => {
+  const { person_id, related_id, type, start_date, end_date } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [person_id, related_id, type, start_date || null, end_date || null]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/relationships/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.relationships WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Photo-People (tagging faces) ---
+app.get('/api/photo/:id/people', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT pp.*, p.name FROM catalog.photo_people pp
+     JOIN catalog.people p ON p.id = pp.person_id
+     WHERE pp.photo_id = $1 ORDER BY p.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/photo/:id/people', async (req, res) => {
+  const { person_id, x, y, w, h } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.photo_people (photo_id, person_id, x, y, w, h) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+    [req.params.id, person_id, x ?? null, y ?? null, w ?? null, h ?? null]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/photo-people/:id', async (req, res) => {
+  const { x, y, w, h } = req.body;
+  const { rows } = await pool.query(
+    'UPDATE catalog.photo_people SET x=$1, y=$2, w=$3, h=$4 WHERE id=$5 RETURNING *',
+    [x ?? null, y ?? null, w ?? null, h ?? null, req.params.id]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/photo-people/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.photo_people WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Places ---
+app.get('/api/places', async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM catalog.places ORDER BY name');
+  res.json(rows);
+});
+
+app.post('/api/places', async (req, res) => {
+  const { name, notes } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.places (name, notes) VALUES ($1,$2) RETURNING *',
+    [name, notes || null]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/places/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.places WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.get('/api/photo/:id/places', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT pp.*, p.name, p.notes FROM catalog.photo_places pp
+     JOIN catalog.places p ON p.id = pp.place_id
+     WHERE pp.photo_id = $1 ORDER BY p.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/photo/:id/places', async (req, res) => {
+  const { place_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.photo_places (photo_id, place_id) VALUES ($1,$2) RETURNING *',
+    [req.params.id, place_id]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/photo-places/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.photo_places WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Things ---
+app.get('/api/things', async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM catalog.things ORDER BY name');
+  res.json(rows);
+});
+
+app.post('/api/things', async (req, res) => {
+  const { name, notes } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.things (name, notes) VALUES ($1,$2) RETURNING *',
+    [name, notes || null]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/things/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.things WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.get('/api/photo/:id/things', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT pt.*, t.name, t.notes FROM catalog.photo_things pt
+     JOIN catalog.things t ON t.id = pt.thing_id
+     WHERE pt.photo_id = $1 ORDER BY t.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/photo/:id/things', async (req, res) => {
+  const { thing_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.photo_things (photo_id, thing_id) VALUES ($1,$2) RETURNING *',
+    [req.params.id, thing_id]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/photo-things/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.photo_things WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
 });
 
 // --- Global error handler (return JSON, not HTML) ---
