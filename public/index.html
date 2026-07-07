@@ -41,8 +41,10 @@
     #people-sidebar h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: #aaa; }
     .people-list { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
     .people-list .person-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: #0f3460; border-radius: 4px; font-size: 0.85rem; }
-    .people-list .person-row button { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 0.9rem; padding: 0 0.3rem; }
-    .people-list .person-row button:hover { color: #e74c3c; }
+    .people-list .person-row button { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 0 0.3rem; color: #aaa; }
+    .people-list .person-row button:hover { color: #eee; }
+    .people-list .person-row .remove-person { color: #e74c3c; font-size: 1.1rem; font-weight: 700; }
+    .people-list .person-row .remove-person:hover { color: #ff6b6b; }
     .sidebar-combo { position: relative; }
     .sidebar-combo input { width: 100%; padding: 0.3rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.8rem; }
     .sidebar-combo .combo-matches { position: absolute; left: 0; right: 0; top: 100%; background: #0f3460; border: 1px solid #533483; border-top: none; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 10; display: none; }
@@ -51,7 +53,7 @@
     .sidebar-combo .combo-match:hover { background: #533483; }
     .sidebar-combo .combo-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
     .sidebar-combo .combo-create:hover { background: #533483; }
-    #detail-panel img { max-width: 100%; max-height: 512px; object-fit: contain; display: block; margin: 0 auto 1rem; border-radius: 4px; }
+    #detail-panel > .zoom-controls { display: flex; justify-content: center; }
     #detail-panel h3 { margin-bottom: 1rem; font-size: 1rem; color: #aaa; }
 
     /* Caption */
@@ -101,6 +103,51 @@
     #ctx-menu button:hover { background: #533483; }
     .lb-counter { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); color: #aaa; font-size: 0.9rem; }
     .lb-filesize { position: absolute; bottom: 1rem; right: 1.5rem; color: #aaa; font-size: 0.85rem; }
+
+    /* Face region overlay */
+    .detail-img-viewport { position: relative; overflow: auto; max-height: 600px; margin: 0 auto 1rem; border-radius: 4px; cursor: grab; }
+    .detail-img-viewport:active { cursor: grabbing; }
+    .detail-img-viewport::-webkit-scrollbar { width: 6px; height: 6px; }
+    .detail-img-viewport::-webkit-scrollbar-track { background: #0f3460; }
+    .detail-img-viewport::-webkit-scrollbar-thumb { background: #533483; border-radius: 3px; }
+    .detail-img-wrap { position: relative; display: inline-block; transform-origin: 0 0; }
+    .detail-img-wrap img { display: block; border-radius: 4px; max-width: none; }
+    .zoom-controls { display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0.4rem; }
+    .zoom-controls button { padding: 0.2rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .zoom-controls button:hover { background: #533483; }
+    .zoom-controls .zoom-level { font-size: 0.75rem; color: #aaa; min-width: 3rem; text-align: center; }
+    #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; display: none; }
+    #face-canvas.faces-on { display: block; pointer-events: auto; cursor: pointer; }
+    #face-canvas.draw-mode { cursor: crosshair; }
+    #tag-face-btn { padding: 0.15rem 0.5rem; background: #0f3460; color: #aaa; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 400; }
+    #tag-face-btn:hover { background: #533483; color: #eee; }
+    #tag-face-btn.active { background: #533483; color: #fff; font-weight: 600; }
+    /* Face person picker (floats near drawn rect) */
+    #face-picker { display: none; position: absolute; z-index: 10; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.4rem; width: 200px; }
+    #face-picker.open { display: block; }
+    #face-picker input { width: 100%; padding: 0.3rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    #face-picker .fp-matches { max-height: 120px; overflow-y: auto; }
+    #face-picker .fp-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-radius: 3px; }
+    #face-picker .fp-match:hover { background: #533483; }
+    #face-picker .fp-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
+    #face-picker .fp-create:hover { background: #533483; }
+    /* Sidebar person row enhancements */
+    .person-row .face-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; flex-shrink: 0; }
+    .person-row .locate-btn { background: none; border: none; color: #8e94f2; cursor: pointer; font-size: 0.85rem; padding: 0 0.3rem; }
+    .person-row .locate-btn:hover { color: #aab0ff; }
+    @keyframes flash-highlight { 0%,100% { background: #0f3460; } 50% { background: #533483; } }
+    .person-row.flash { animation: flash-highlight 0.4s ease 3; }
+    /* Person remove popup */
+    #person-remove-popup { display: none; position: fixed; z-index: 160; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.75rem; box-shadow: 0 4px 16px rgba(0,0,0,0.6); width: 220px; }
+    #person-remove-popup.open { display: block; }
+    #person-remove-popup .prp-name { font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem; text-align: center; }
+    #person-remove-popup button { display: block; width: 100%; padding: 0.4rem 0.6rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 0.3rem; text-align: left; }
+    #person-remove-popup .prp-unlink { background: #0f3460; color: #eee; }
+    #person-remove-popup .prp-unlink:hover { background: #533483; }
+    #person-remove-popup .prp-delete { background: #5a1a1a; color: #e74c3c; }
+    #person-remove-popup .prp-delete:hover { background: #7a2a2a; }
+    #person-remove-popup .prp-cancel { background: transparent; color: #aaa; text-align: center; }
+    #person-remove-popup .prp-cancel:hover { color: #eee; }
 
     /* Multi-select checkbox */
     .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: #533483; cursor: pointer; z-index: 10; }
@@ -223,7 +270,22 @@
         <button id="close-detail">Close</button>
         <button id="detail-next">Next &gt;</button>
       </div>
-      <img id="detail-img" src="" alt="">
+      <div class="zoom-controls">
+        <button id="zoom-out" title="Zoom out">-</button>
+        <span class="zoom-level" id="zoom-level">Fit</span>
+        <button id="zoom-in" title="Zoom in">+</button>
+        <button id="zoom-reset" title="Reset zoom">Fit</button>
+      </div>
+      <div class="detail-img-viewport" id="detail-img-viewport">
+        <div class="detail-img-wrap" id="detail-img-wrap">
+          <img id="detail-img" src="" alt="">
+          <canvas id="face-canvas" width="0" height="0"></canvas>
+          <div id="face-picker">
+            <input id="face-picker-input" placeholder="Type name...">
+            <div class="fp-matches" id="fp-matches"></div>
+          </div>
+        </div>
+      </div>
       <h3 id="detail-filename"></h3>
       <div id="detail-filesize" style="font-size:0.85rem;color:#aaa;margin-bottom:1rem;"></div>
 
@@ -284,7 +346,7 @@
       </div>
     </div>
     <div id="people-sidebar">
-      <h4>People in Photo</h4>
+      <h4 style="display:flex;align-items:center;justify-content:space-between;">People in Photo <button id="tag-face-btn" title="Toggle face tagging mode">Faces</button></h4>
       <div class="people-list" id="people-list"></div>
       <div class="sidebar-combo" id="people-combo">
         <input placeholder="Type name to add..." id="people-input">
@@ -353,6 +415,13 @@
     <div class="lb-filesize" id="lb-filesize"></div>
   </div>
 
+
+  <div id="person-remove-popup">
+    <div class="prp-name" id="prp-name"></div>
+    <button class="prp-unlink" id="prp-unlink">Remove from this photo</button>
+    <button class="prp-delete" id="prp-delete">Delete person entirely</button>
+    <button class="prp-cancel" id="prp-cancel">Cancel</button>
+  </div>
 
   <div id="ctx-menu">
     <button id="ctx-rotate-right">Rotate right</button>
@@ -630,6 +699,9 @@
 
     // Detail view
     async function openDetail(photo) {
+      // Reset face draw state when switching photos (preserve facesMode toggle)
+      faceDrawMode = false;
+      currentPhotoPeople = [];
       currentPhoto = photo;
       detailImg.src = photoImgSrc(photo);
       detailFilename.textContent = photo.filename;
@@ -722,6 +794,7 @@
       const input = document.getElementById(inputId);
       const matchesEl = document.getElementById(matchesId);
       const listEl = document.getElementById(listId);
+      let comboBusy = false;
 
       function renderMatches() {
         const q = input.value.trim().toLowerCase();
@@ -734,7 +807,8 @@
           div.textContent = item.name;
           div.addEventListener('mousedown', async (e) => {
             e.preventDefault();
-            if (!currentPhoto || !currentPhoto.id) return;
+            if (comboBusy || !currentPhoto || !currentPhoto.id) return;
+            comboBusy = true;
             await fetch(photoLinkUrl(currentPhoto.id), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -742,6 +816,7 @@
             });
             input.value = '';
             matchesEl.classList.remove('open');
+            comboBusy = false;
             loadPhotoItemsFn();
           });
           matchesEl.appendChild(div);
@@ -754,7 +829,8 @@
           div.textContent = `+ Create "${input.value.trim()}"`;
           div.addEventListener('mousedown', async (e) => {
             e.preventDefault();
-            if (!currentPhoto || !currentPhoto.id) return;
+            if (comboBusy || !currentPhoto || !currentPhoto.id) return;
+            comboBusy = true;
             const res = await fetch(createUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -768,6 +844,7 @@
             });
             input.value = '';
             matchesEl.classList.remove('open');
+            comboBusy = false;
             await loadAllSidebar();
             loadPhotoItemsFn();
           });
@@ -783,25 +860,124 @@
       return { listEl };
     }
 
+    // --- Face region state (declared early for use in loadPhotoPeople) ---
+    const FACE_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63'];
+    let facesMode = false;  // toggled by Faces button -- show rects, allow drawing
+    let faceDrawMode = false;
+    let currentPhotoPeople = [];
+
     // --- People ---
     const peopleList = document.getElementById('people-list');
     let allPeople = [];
     async function loadAllPeople() { allPeople = await (await fetch('/api/people')).json(); }
     async function loadPhotoPeople() {
       peopleList.innerHTML = '';
-      if (!currentPhoto || !currentPhoto.id) return;
+      if (!currentPhoto || !currentPhoto.id) { currentPhotoPeople = []; drawFaceRects(); return; }
       const people = await (await fetch(`/api/photo/${currentPhoto.id}/people`)).json();
-      people.forEach(pp => {
+      currentPhotoPeople = people;
+      people.forEach((pp, i) => {
         const row = document.createElement('div');
         row.className = 'person-row';
-        row.innerHTML = `<span>${pp.name}</span><button title="Remove">&times;</button>`;
-        row.querySelector('button').addEventListener('click', async () => {
-          await fetch(`/api/photo-people/${pp.id}`, { method: 'DELETE' });
-          loadPhotoPeople();
+        row.dataset.ppId = pp.id;
+        const color = FACE_COLORS[i % FACE_COLORS.length];
+        const hasCoords = pp.x != null && pp.y != null && pp.w != null && pp.h != null;
+        let inner = '';
+        if (facesMode && hasCoords) {
+          inner += `<span class="face-dot" style="background:${color};"></span>`;
+        }
+        inner += `<span style="flex:1">${pp.name}</span>`;
+        if (facesMode && !hasCoords) {
+          inner += `<button class="locate-btn" title="Locate in photo">&#x1F4CD;</button>`;
+        }
+        inner += `<button class="remove-person" title="Remove">&times;</button>`;
+        row.innerHTML = inner;
+        row.querySelector('.remove-person').addEventListener('click', (e) => {
+          e.stopPropagation();
+          showPersonRemovePopup(pp, e.target);
         });
+        // Locate button
+        const locateBtn = row.querySelector('.locate-btn');
+        if (locateBtn) {
+          locateBtn.addEventListener('click', () => {
+            enterDrawMode(pp.id);
+          });
+        }
+        // Click row to highlight rect on canvas (only in faces mode)
+        if (facesMode) {
+          row.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            if (hasCoords) highlightFaceRect(i);
+          });
+        }
         peopleList.appendChild(row);
       });
+      if (facesMode) drawFaceRects();
     }
+
+    function highlightFaceRect(index) {
+      // Briefly make the rect more visible
+      drawFaceRects();
+      const pp = currentPhotoPeople[index];
+      if (!pp || pp.x == null) return;
+      const cw = faceCanvas.width, ch = faceCanvas.height;
+      const nat = { w: detailImg.naturalWidth, h: detailImg.naturalHeight };
+      if (!nat.w || !nat.h) return;
+      const scale = Math.min(cw / nat.w, ch / nat.h);
+      const drawW = nat.w * scale, drawH = nat.h * scale;
+      const offX = (cw - drawW) / 2, offY = (ch - drawH) / 2;
+      const color = FACE_COLORS[index % FACE_COLORS.length];
+      const rx = offX + pp.x * drawW, ry = offY + pp.y * drawH;
+      const rw = pp.w * drawW, rh = pp.h * drawH;
+      faceCtx.strokeStyle = '#fff';
+      faceCtx.lineWidth = 3;
+      faceCtx.strokeRect(rx - 1, ry - 1, rw + 2, rh + 2);
+      setTimeout(() => drawFaceRects(), 800);
+    }
+
+    // --- Person remove popup ---
+    const personRemovePopup = document.getElementById('person-remove-popup');
+    const prpName = document.getElementById('prp-name');
+    let prpData = null; // { ppId, personId, name }
+
+    function showPersonRemovePopup(pp, anchorEl) {
+      prpData = { ppId: pp.id, personId: pp.person_id, name: pp.name };
+      prpName.textContent = pp.name;
+      // Position near the button
+      const rect = anchorEl.getBoundingClientRect();
+      personRemovePopup.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+      personRemovePopup.style.top = (rect.bottom + 4) + 'px';
+      personRemovePopup.classList.add('open');
+    }
+
+    function closePersonRemovePopup() {
+      personRemovePopup.classList.remove('open');
+      prpData = null;
+    }
+
+    document.getElementById('prp-cancel').addEventListener('click', closePersonRemovePopup);
+
+    document.getElementById('prp-unlink').addEventListener('click', async () => {
+      if (!prpData) return;
+      await fetch(`/api/photo-people/${prpData.ppId}`, { method: 'DELETE' });
+      closePersonRemovePopup();
+      loadPhotoPeople();
+    });
+
+    document.getElementById('prp-delete').addEventListener('click', async () => {
+      if (!prpData) return;
+      await fetch(`/api/people/${prpData.personId}`, { method: 'DELETE' });
+      closePersonRemovePopup();
+      await loadAllPeople();
+      loadPhotoPeople();
+    });
+
+    // Close popup on outside click
+    document.addEventListener('click', (e) => {
+      if (personRemovePopup.classList.contains('open') && !personRemovePopup.contains(e.target) && !e.target.classList.contains('remove-person')) {
+        closePersonRemovePopup();
+      }
+    });
+
     setupSidebarCombo({
       inputId: 'people-input', matchesId: 'people-matches', listId: 'people-list',
       allItemsFn: () => allPeople, loadPhotoItemsFn: loadPhotoPeople,
@@ -1121,17 +1297,448 @@
     document.getElementById('lb-prev').addEventListener('click', () => lbNav(-1));
     document.getElementById('lb-next').addEventListener('click', () => lbNav(1));
 
-    // Click detail image to open lightbox
+    // Click detail image to open lightbox (canvas is on top, so this is fallback)
     detailImg.style.cursor = 'pointer';
     detailImg.addEventListener('click', () => {
+      if (faceDrawMode) return;
       if (!currentPhoto) return;
       const list = getCurrentFilteredList();
       const idx = list.findIndex(p => p.id === currentPhoto.id);
       openLightbox(idx >= 0 ? idx : 0);
     });
 
+    // --- Zoom ---
+    const viewport = document.getElementById('detail-img-viewport');
+    const zoomLevelEl = document.getElementById('zoom-level');
+    let zoomScale = 0; // 0 = fit mode
+    const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4];
+
+    function getFitScale() {
+      const img = detailImg;
+      if (!img.naturalWidth) return 1;
+      const maxW = viewport.clientWidth || 868;
+      const maxH = 512;
+      return Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+    }
+
+    function applyZoom(centerOnMouse) {
+      const wrap = document.getElementById('detail-img-wrap');
+      const img = detailImg;
+      if (!img.naturalWidth) return;
+      const effectiveScale = zoomScale || getFitScale();
+      const w = img.naturalWidth * effectiveScale;
+      const h = img.naturalHeight * effectiveScale;
+      img.style.width = w + 'px';
+      img.style.height = h + 'px';
+      wrap.style.width = w + 'px';
+      wrap.style.height = h + 'px';
+      zoomLevelEl.textContent = zoomScale ? Math.round(effectiveScale * 100) + '%' : 'Fit';
+      resizeFaceCanvas();
+      drawFaceRects();
+    }
+
+    function zoomIn() {
+      const cur = zoomScale || getFitScale();
+      const next = ZOOM_STEPS.find(s => s > cur + 0.01);
+      if (next) { zoomScale = next; applyZoom(); }
+    }
+
+    function zoomOut() {
+      const cur = zoomScale || getFitScale();
+      const prev = [...ZOOM_STEPS].reverse().find(s => s < cur - 0.01);
+      if (prev) { zoomScale = prev; applyZoom(); }
+    }
+
+    function zoomReset() {
+      zoomScale = 0;
+      applyZoom();
+      viewport.scrollTop = 0;
+      viewport.scrollLeft = 0;
+    }
+
+    document.getElementById('zoom-in').addEventListener('click', zoomIn);
+    document.getElementById('zoom-out').addEventListener('click', zoomOut);
+    document.getElementById('zoom-reset').addEventListener('click', zoomReset);
+
+    // Mouse wheel zoom (Ctrl+wheel or just wheel on viewport)
+    viewport.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      // Zoom toward cursor position
+      const rect = viewport.getBoundingClientRect();
+      const mx = e.clientX - rect.left + viewport.scrollLeft;
+      const my = e.clientY - rect.top + viewport.scrollTop;
+      const oldScale = zoomScale || getFitScale();
+
+      if (e.deltaY < 0) zoomIn(); else zoomOut();
+
+      const newScale = zoomScale || getFitScale();
+      if (newScale !== oldScale) {
+        const ratio = newScale / oldScale;
+        viewport.scrollLeft = mx * ratio - (e.clientX - rect.left);
+        viewport.scrollTop = my * ratio - (e.clientY - rect.top);
+      }
+    }, { passive: false });
+
+    // Pan with middle-click drag or grab cursor
+    let isPanning = false, panStartX = 0, panStartY = 0, panScrollX = 0, panScrollY = 0;
+    viewport.addEventListener('mousedown', (e) => {
+      // Don't pan if clicking on canvas in faces mode (drawing) or on picker
+      if (e.target.closest('#face-picker')) return;
+      if (e.button === 1 || (e.button === 0 && !facesMode && zoomScale)) {
+        isPanning = true;
+        panStartX = e.clientX; panStartY = e.clientY;
+        panScrollX = viewport.scrollLeft; panScrollY = viewport.scrollTop;
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      viewport.scrollLeft = panScrollX - (e.clientX - panStartX);
+      viewport.scrollTop = panScrollY - (e.clientY - panStartY);
+    });
+    document.addEventListener('mouseup', () => { isPanning = false; });
+
+    // Reset zoom when switching photos
+    detailImg.addEventListener('load', () => {
+      zoomScale = 0;
+      setTimeout(() => {
+        applyZoom();
+      }, 50);
+    });
+
+    // --- Face Region Drawing & Click-to-Highlight ---
+    const faceCanvas = document.getElementById('face-canvas');
+    const faceCtx = faceCanvas.getContext('2d');
+    const tagFaceBtn = document.getElementById('tag-face-btn');
+    const facePicker = document.getElementById('face-picker');
+    const facePickerInput = document.getElementById('face-picker-input');
+    const fpMatches = document.getElementById('fp-matches');
+    const detailImgWrap = document.getElementById('detail-img-wrap');
+
+    let faceDrawForPpId = null; // if drawing for a specific existing person-row (locate mode)
+    let faceDrawRect = null; // {x,y,w,h} in canvas pixels during draw
+    let faceDrawing = false;
+    let faceStartX = 0, faceStartY = 0;
+
+    function resizeFaceCanvas() {
+      // Match canvas to the rendered image size
+      const img = detailImg;
+      faceCanvas.width = img.clientWidth;
+      faceCanvas.height = img.clientHeight;
+      // Position canvas exactly over the image
+      faceCanvas.style.width = img.clientWidth + 'px';
+      faceCanvas.style.height = img.clientHeight + 'px';
+      faceCanvas.style.top = img.offsetTop + 'px';
+      faceCanvas.style.left = img.offsetLeft + 'px';
+    }
+
+    function drawFaceRects() {
+      const cw = faceCanvas.width, ch = faceCanvas.height;
+      faceCtx.clearRect(0, 0, cw, ch);
+      if (!currentPhotoPeople || cw === 0 || ch === 0) return;
+
+      // We need to map fractional coords to canvas coords.
+      // The image might be letterboxed via object-fit:contain.
+      // Since the canvas matches img.clientWidth/Height and the wrapper
+      // uses inline-block + display:flex justify center, the canvas
+      // and the image rendered area are the same.
+      // But object-fit:contain may leave bars. We need the actual
+      // drawn area within the img element.
+      const nat = { w: detailImg.naturalWidth, h: detailImg.naturalHeight };
+      if (!nat.w || !nat.h) return;
+      const scale = Math.min(cw / nat.w, ch / nat.h);
+      const drawW = nat.w * scale, drawH = nat.h * scale;
+      const offX = (cw - drawW) / 2, offY = (ch - drawH) / 2;
+
+      currentPhotoPeople.forEach((pp, i) => {
+        if (pp.x == null || pp.y == null || pp.w == null || pp.h == null) return;
+        const color = FACE_COLORS[i % FACE_COLORS.length];
+        const rx = offX + pp.x * drawW;
+        const ry = offY + pp.y * drawH;
+        const rw = pp.w * drawW;
+        const rh = pp.h * drawH;
+
+        faceCtx.strokeStyle = color;
+        faceCtx.lineWidth = 2;
+        faceCtx.strokeRect(rx, ry, rw, rh);
+        faceCtx.fillStyle = hexToRgba(color, 0.15);
+        faceCtx.fillRect(rx, ry, rw, rh);
+
+        // Label
+        const label = pp.name || '';
+        if (label) {
+          faceCtx.font = '12px -apple-system, sans-serif';
+          const tw = faceCtx.measureText(label).width;
+          faceCtx.fillStyle = 'rgba(0,0,0,0.7)';
+          faceCtx.fillRect(rx, ry - 18, tw + 8, 18);
+          faceCtx.fillStyle = color;
+          faceCtx.fillText(label, rx + 4, ry - 5);
+        }
+      });
+
+      // Draw in-progress rectangle
+      if (faceDrawRect) {
+        faceCtx.strokeStyle = '#fff';
+        faceCtx.lineWidth = 2;
+        faceCtx.setLineDash([5, 3]);
+        faceCtx.strokeRect(faceDrawRect.x, faceDrawRect.y, faceDrawRect.w, faceDrawRect.h);
+        faceCtx.setLineDash([]);
+      }
+    }
+
+    function hexToRgba(hex, alpha) {
+      hex = hex.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // Convert canvas pixel coords to fractional image coords (0-1)
+    function canvasToFrac(cx, cy) {
+      const cw = faceCanvas.width, ch = faceCanvas.height;
+      const nat = { w: detailImg.naturalWidth, h: detailImg.naturalHeight };
+      const scale = Math.min(cw / nat.w, ch / nat.h);
+      const drawW = nat.w * scale, drawH = nat.h * scale;
+      const offX = (cw - drawW) / 2, offY = (ch - drawH) / 2;
+      return { x: (cx - offX) / drawW, y: (cy - offY) / drawH };
+    }
+
+    // --- Faces toggle button ---
+    tagFaceBtn.addEventListener('click', () => {
+      if (faceDrawMode) {
+        // If actively drawing, just cancel the draw
+        exitDrawMode();
+        return;
+      }
+      toggleFacesMode();
+    });
+
+    function toggleFacesMode(forceOn) {
+      facesMode = forceOn != null ? forceOn : !facesMode;
+      tagFaceBtn.classList.toggle('active', facesMode);
+      faceCanvas.classList.toggle('faces-on', facesMode);
+      if (facesMode) {
+        resizeFaceCanvas();
+        drawFaceRects();
+      } else {
+        exitDrawMode();
+      }
+      loadPhotoPeople(); // re-render sidebar with/without dots & locate
+    }
+
+    function enterDrawMode(ppId) {
+      if (!currentPhoto || !currentPhoto.id) return;
+      if (!facesMode) toggleFacesMode(true);
+      faceDrawMode = true;
+      faceDrawForPpId = ppId || null;
+      faceCanvas.classList.add('draw-mode');
+      faceDrawRect = null;
+      closeFacePicker();
+    }
+
+    function exitDrawMode() {
+      faceDrawMode = false;
+      faceDrawForPpId = null;
+      faceDrawRect = null;
+      faceDrawing = false;
+      faceCanvas.classList.remove('draw-mode');
+      closeFacePicker();
+      drawFaceRects();
+    }
+
+    // Canvas mouse events -- in faces mode, drag to draw
+    faceCanvas.addEventListener('mousedown', (e) => {
+      if (!facesMode) return;
+      closeFacePicker();
+      const rect = faceCanvas.getBoundingClientRect();
+      faceStartX = e.clientX - rect.left;
+      faceStartY = e.clientY - rect.top;
+      faceDrawing = true;
+      faceDrawRect = { x: faceStartX, y: faceStartY, w: 0, h: 0 };
+    });
+
+    faceCanvas.addEventListener('mousemove', (e) => {
+      if (!faceDrawing) return;
+      const rect = faceCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      faceDrawRect = {
+        x: Math.min(faceStartX, mx),
+        y: Math.min(faceStartY, my),
+        w: Math.abs(mx - faceStartX),
+        h: Math.abs(my - faceStartY)
+      };
+      drawFaceRects();
+    });
+
+    faceCanvas.addEventListener('mouseup', (e) => {
+      if (!faceDrawing) return;
+      faceDrawing = false;
+      if (!faceDrawRect || faceDrawRect.w < 5 || faceDrawRect.h < 5) {
+        // Too small -- treat as a click (check for existing rect)
+        faceDrawRect = null;
+        handleFaceClick(e);
+        drawFaceRects();
+        return;
+      }
+      // Convert to fractional coords
+      const tl = canvasToFrac(faceDrawRect.x, faceDrawRect.y);
+      const br = canvasToFrac(faceDrawRect.x + faceDrawRect.w, faceDrawRect.y + faceDrawRect.h);
+      const fracRect = { x: tl.x, y: tl.y, w: br.x - tl.x, h: br.y - tl.y };
+
+      if (faceDrawForPpId) {
+        // Locate mode: update existing photo_people record
+        saveFaceCoords(faceDrawForPpId, fracRect);
+      } else {
+        // Show person picker near the drawn rect
+        showFacePicker(faceDrawRect, fracRect);
+      }
+    });
+
+    // Click on canvas in faces mode: check face rects (click-to-highlight)
+    // Note: drag-to-draw is handled by mousedown/up, click only fires for non-drag
+    faceCanvas.addEventListener('click', (e) => {
+      if (!facesMode || !currentPhoto) return;
+      // mouseup already handled large drags; clicks land here
+      // checkFaceClickAndHighlight is called from handleFaceClick in mouseup for small drags
+    });
+
+    function checkFaceClickAndHighlight(e) {
+      const rect = faceCanvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const cw = faceCanvas.width, ch = faceCanvas.height;
+      const nat = { w: detailImg.naturalWidth, h: detailImg.naturalHeight };
+      if (!nat.w || !nat.h) return false;
+      const scale = Math.min(cw / nat.w, ch / nat.h);
+      const drawW = nat.w * scale, drawH = nat.h * scale;
+      const offX = (cw - drawW) / 2, offY = (ch - drawH) / 2;
+      for (const pp of currentPhotoPeople) {
+        if (pp.x == null) continue;
+        const rx = offX + pp.x * drawW, ry = offY + pp.y * drawH;
+        const rw = pp.w * drawW, rh = pp.h * drawH;
+        if (cx >= rx && cx <= rx + rw && cy >= ry && cy <= ry + rh) {
+          highlightPersonRow(pp.id);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function handleFaceClick(e) {
+      checkFaceClickAndHighlight(e);
+    }
+
+    function highlightPersonRow(ppId) {
+      const rows = peopleList.querySelectorAll('.person-row');
+      rows.forEach(row => {
+        if (row.dataset.ppId == ppId) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          row.classList.remove('flash');
+          void row.offsetWidth; // force reflow
+          row.classList.add('flash');
+          setTimeout(() => row.classList.remove('flash'), 1500);
+        }
+      });
+    }
+
+    // --- Face person picker ---
+    function showFacePicker(canvasRect, fracRect) {
+      facePicker.classList.add('open');
+      // Position near the drawn rectangle
+      facePicker.style.left = Math.min(canvasRect.x + canvasRect.w + 5, faceCanvas.width - 210) + 'px';
+      facePicker.style.top = canvasRect.y + 'px';
+      facePickerInput.value = '';
+      facePickerInput.focus();
+      renderFacePickerMatches(fracRect);
+
+      facePickerInput.oninput = () => renderFacePickerMatches(fracRect);
+    }
+
+    let facePickerBusy = false;
+
+    function renderFacePickerMatches(fracRect) {
+      const q = facePickerInput.value.trim().toLowerCase();
+      fpMatches.innerHTML = '';
+      if (!q) return;
+      const hits = allPeople.filter(p => p.name.toLowerCase().includes(q)).slice(0, 10);
+      hits.forEach(person => {
+        const div = document.createElement('div');
+        div.className = 'fp-match';
+        div.textContent = person.name;
+        div.addEventListener('mousedown', async (e) => {
+          e.preventDefault();
+          if (facePickerBusy) return;
+          facePickerBusy = true;
+          await assignFacePerson(person.id, fracRect);
+        });
+        fpMatches.appendChild(div);
+      });
+      // Create option
+      if (q && !hits.some(p => p.name.toLowerCase() === q)) {
+        const div = document.createElement('div');
+        div.className = 'fp-create';
+        div.textContent = `+ Create "${facePickerInput.value.trim()}"`;
+        div.addEventListener('mousedown', async (e) => {
+          e.preventDefault();
+          if (facePickerBusy) return;
+          facePickerBusy = true;
+          const res = await fetch('/api/people', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: facePickerInput.value.trim() })
+          });
+          const created = await res.json();
+          await loadAllPeople();
+          await assignFacePerson(created.id, fracRect);
+        });
+        fpMatches.appendChild(div);
+      }
+    }
+
+    async function assignFacePerson(personId, fracRect) {
+      if (!currentPhoto || !currentPhoto.id) return;
+      await fetch(`/api/photo/${currentPhoto.id}/people`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ person_id: personId, x: fracRect.x, y: fracRect.y, w: fracRect.w, h: fracRect.h })
+      });
+      closeFacePicker();
+      exitDrawMode();
+      facePickerBusy = false;
+      await loadPhotoPeople();
+    }
+
+    async function saveFaceCoords(ppId, fracRect) {
+      await fetch(`/api/photo-people/${ppId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x: fracRect.x, y: fracRect.y, w: fracRect.w, h: fracRect.h })
+      });
+      exitDrawMode();
+      await loadPhotoPeople();
+    }
+
+    function closeFacePicker() {
+      facePicker.classList.remove('open');
+      facePickerInput.value = '';
+      fpMatches.innerHTML = '';
+      faceDrawRect = null;
+      facePickerBusy = false;
+    }
+
     // Keyboard nav
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && faceDrawMode) {
+        exitDrawMode();
+        return;
+      }
+      if (e.key === 'Escape' && facePicker.classList.contains('open')) {
+        closeFacePicker();
+        return;
+      }
       if (!lightbox.classList.contains('active')) return;
       if (e.key === 'Escape') closeLightbox();
       else if (e.key === 'ArrowLeft') lbNav(-1);
