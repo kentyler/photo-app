@@ -35,9 +35,10 @@ A local web app for browsing family photos. The photos are stored in a shared Go
    npm install
    ```
 
-2. **Find the lowres folder path**
+2. **Find the lowres folder path and make it available offline**
    - Open File Explorer (Windows) or Finder (Mac)
    - Navigate to Google Drive > find the "lowres" folder
+   - **IMPORTANT**: Right-click the "lowres" folder and select **"Available offline"** (or "Keep on this device"). This forces Google Drive to download the actual files so the app can read them. Without this, photos will show as broken images.
    - Copy the full path. Examples:
      - Windows: `G:/My Drive/lowres` or `N:/My Drive/lowres`
      - Mac: `/Volumes/GoogleDrive/My Drive/lowres`
