@@ -131,6 +131,19 @@
     #face-picker .fp-match:hover { background: #533483; }
     #face-picker .fp-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
     #face-picker .fp-create:hover { background: #533483; }
+    /* Face identify button and results */
+    #fp-identify-btn { width: 100%; padding: 0.3rem; background: #0a4d2e; color: #7fdb9a; border: 1px solid #27ae60; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    #fp-identify-btn:hover { background: #0e6b3e; color: #fff; }
+    #fp-identify-btn:disabled { opacity: 0.5; cursor: wait; }
+    #fp-identify-results { display: none; }
+    #fp-identify-results.open { display: block; }
+    .fp-id-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-radius: 3px; display: flex; align-items: center; gap: 0.4rem; }
+    .fp-id-match:hover { background: #533483; }
+    .fp-id-match .fp-conf-bar { flex: 0 0 40px; height: 6px; border-radius: 3px; background: #333; overflow: hidden; }
+    .fp-id-match .fp-conf-fill { height: 100%; border-radius: 3px; }
+    .fp-id-match .fp-dist { font-size: 0.7rem; color: #888; min-width: 30px; text-align: right; }
+    #fp-back-link { font-size: 0.75rem; color: #8e94f2; cursor: pointer; margin-top: 0.3rem; display: inline-block; }
+    #fp-back-link:hover { text-decoration: underline; }
     /* Sidebar person row enhancements */
     .person-row .face-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; flex-shrink: 0; }
     .person-row .locate-btn { background: none; border: none; color: #8e94f2; cursor: pointer; font-size: 0.85rem; padding: 0 0.3rem; }
@@ -148,6 +161,26 @@
     #person-remove-popup .prp-delete:hover { background: #7a2a2a; }
     #person-remove-popup .prp-cancel { background: transparent; color: #aaa; text-align: center; }
     #person-remove-popup .prp-cancel:hover { color: #eee; }
+
+    /* Person detail popup (relationships) */
+    #person-detail-popup { display: none; position: fixed; z-index: 170; background: #16213e; border: 1px solid #533483; border-radius: 8px; padding: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.7); width: 320px; max-height: 80vh; overflow-y: auto; }
+    #person-detail-popup.open { display: block; }
+    #person-detail-popup h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #eee; }
+    .pdp-rels { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .pdp-rel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: #0f3460; border-radius: 4px; font-size: 0.85rem; }
+    .pdp-rel-row .rel-label { color: #8e94f2; margin-right: 0.4rem; }
+    .pdp-rel-row .rel-delete { background: none; border: none; color: #e74c3c; font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
+    .pdp-rel-row .rel-delete:hover { color: #ff6b6b; }
+    .pdp-add-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem; }
+    .pdp-add-row select { background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; }
+    .pdp-add-row .pdp-person-wrap { position: relative; flex: 1; }
+    .pdp-add-row input { width: 100%; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.8rem; box-sizing: border-box; }
+    .pdp-matches { position: absolute; top: 100%; left: 0; right: 0; background: #16213e; border: 1px solid #533483; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 180; display: none; }
+    .pdp-matches.open { display: block; }
+    .pdp-matches div { padding: 0.3rem 0.5rem; font-size: 0.8rem; cursor: pointer; }
+    .pdp-matches div:hover { background: #533483; }
+    .pdp-close { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 0.8rem; padding: 0.3rem 0.6rem; display: block; margin: 0 auto; }
+    .pdp-close:hover { color: #eee; }
 
     /* Multi-select checkbox */
     .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: #533483; cursor: pointer; z-index: 10; }
@@ -281,6 +314,11 @@
           <img id="detail-img" src="" alt="">
           <canvas id="face-canvas" width="0" height="0"></canvas>
           <div id="face-picker">
+            <button id="fp-identify-btn">Identify</button>
+            <div id="fp-identify-results">
+              <div id="fp-id-matches"></div>
+              <span id="fp-back-link">Back to search</span>
+            </div>
             <input id="face-picker-input" placeholder="Type name...">
             <div class="fp-matches" id="fp-matches"></div>
           </div>
@@ -421,6 +459,30 @@
     <button class="prp-unlink" id="prp-unlink">Remove from this photo</button>
     <button class="prp-delete" id="prp-delete">Delete person entirely</button>
     <button class="prp-cancel" id="prp-cancel">Cancel</button>
+  </div>
+
+  <div id="person-detail-popup">
+    <h3 id="pdp-title"></h3>
+    <div class="pdp-rels" id="pdp-rels"></div>
+    <div class="pdp-add-row">
+      <select id="pdp-type-select">
+        <option value="parent">parent</option>
+        <option value="child">child</option>
+        <option value="spouse">spouse</option>
+        <option value="sibling">sibling</option>
+        <option value="friend">friend</option>
+        <option value="employer">employer</option>
+        <option value="employee">employee</option>
+        <option value="teacher">teacher</option>
+        <option value="student">student</option>
+        <option value="classmate">classmate</option>
+      </select>
+      <div class="pdp-person-wrap">
+        <input id="pdp-person-input" placeholder="Type name...">
+        <div class="pdp-matches" id="pdp-person-matches"></div>
+      </div>
+    </div>
+    <button class="pdp-close" id="pdp-close">Close</button>
   </div>
 
   <div id="ctx-menu">
@@ -885,7 +947,7 @@
         if (facesMode && hasCoords) {
           inner += `<span class="face-dot" style="background:${color};"></span>`;
         }
-        inner += `<span style="flex:1">${pp.name}</span>`;
+        inner += `<span class="person-name-link" style="flex:1;cursor:pointer;" data-person-id="${pp.person_id}">${pp.name}</span>`;
         if (facesMode && !hasCoords) {
           inner += `<button class="locate-btn" title="Locate in photo">&#x1F4CD;</button>`;
         }
@@ -900,6 +962,14 @@
         if (locateBtn) {
           locateBtn.addEventListener('click', () => {
             enterDrawMode(pp.id);
+          });
+        }
+        // Click person name to open detail popup
+        const nameLink = row.querySelector('.person-name-link');
+        if (nameLink) {
+          nameLink.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showPersonDetailPopup(pp.person_id, pp.name, e.target);
           });
         }
         // Click row to highlight rect on canvas (only in faces mode)
@@ -976,6 +1046,95 @@
       if (personRemovePopup.classList.contains('open') && !personRemovePopup.contains(e.target) && !e.target.classList.contains('remove-person')) {
         closePersonRemovePopup();
       }
+    });
+
+    // --- Person detail popup (relationships) ---
+    const pdpPopup = document.getElementById('person-detail-popup');
+    const pdpTitle = document.getElementById('pdp-title');
+    const pdpRels = document.getElementById('pdp-rels');
+    const pdpTypeSelect = document.getElementById('pdp-type-select');
+    const pdpPersonInput = document.getElementById('pdp-person-input');
+    const pdpPersonMatches = document.getElementById('pdp-person-matches');
+    let pdpPersonId = null;
+    let pdpRelatedIds = new Set();
+
+    async function showPersonDetailPopup(personId, name, anchorEl) {
+      pdpPersonId = personId;
+      pdpRelatedIds = new Set();
+      pdpTitle.textContent = name;
+      pdpPersonInput.value = '';
+      pdpPersonMatches.classList.remove('open');
+      // Load relationships
+      const rels = await (await fetch(`/api/people/${personId}/relationships`)).json();
+      pdpRels.innerHTML = '';
+      rels.forEach(r => {
+        pdpRelatedIds.add(r.related_id);
+        const row = document.createElement('div');
+        row.className = 'pdp-rel-row';
+        row.innerHTML = `<span><span class="rel-label">${r.type}</span> ${r.related_name}</span><button class="rel-delete" title="Remove">&times;</button>`;
+        row.querySelector('.rel-delete').addEventListener('click', async () => {
+          await fetch(`/api/relationships/${r.id}`, { method: 'DELETE' });
+          showPersonDetailPopup(personId, name, anchorEl);
+        });
+        pdpRels.appendChild(row);
+      });
+      // Position near anchor
+      const rect = anchorEl.getBoundingClientRect();
+      pdpPopup.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+      pdpPopup.style.top = Math.min(rect.bottom + 4, window.innerHeight - 400) + 'px';
+      pdpPopup.classList.add('open');
+    }
+
+    function closePersonDetailPopup() {
+      pdpPopup.classList.remove('open');
+      pdpPersonId = null;
+    }
+
+    document.getElementById('pdp-close').addEventListener('click', closePersonDetailPopup);
+
+    document.addEventListener('click', (e) => {
+      if (pdpPopup.classList.contains('open') && !pdpPopup.contains(e.target) && !e.target.classList.contains('person-name-link')) {
+        closePersonDetailPopup();
+      }
+    });
+
+    // Type-ahead for adding relationships
+    pdpPersonInput.addEventListener('input', () => {
+      const q = pdpPersonInput.value.trim().toLowerCase();
+      pdpPersonMatches.innerHTML = '';
+      if (!q) { pdpPersonMatches.classList.remove('open'); return; }
+      const hits = allPeople.filter(p =>
+        p.id !== pdpPersonId &&
+        p.name.toLowerCase().includes(q) &&
+        !pdpRelatedIds.has(p.id)
+      ).slice(0, 10);
+      hits.forEach(p => {
+        const div = document.createElement('div');
+        div.textContent = p.name;
+        div.addEventListener('mousedown', async (e) => {
+          e.preventDefault();
+          const type = pdpTypeSelect.value;
+          await fetch('/api/relationships', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ person_id: pdpPersonId, related_id: p.id, type })
+          });
+          pdpPersonInput.value = '';
+          pdpPersonMatches.classList.remove('open');
+          // Refresh the popup
+          showPersonDetailPopup(pdpPersonId, pdpTitle.textContent, pdpPopup);
+        });
+        pdpPersonMatches.appendChild(div);
+      });
+      pdpPersonMatches.classList.toggle('open', hits.length > 0);
+    });
+
+    pdpPersonInput.addEventListener('focus', () => {
+      if (pdpPersonInput.value.trim()) pdpPersonInput.dispatchEvent(new Event('input'));
+    });
+
+    pdpPersonInput.addEventListener('blur', () => {
+      pdpPersonMatches.classList.remove('open');
     });
 
     setupSidebarCombo({
@@ -1414,6 +1573,10 @@
     const facePicker = document.getElementById('face-picker');
     const facePickerInput = document.getElementById('face-picker-input');
     const fpMatches = document.getElementById('fp-matches');
+    const fpIdentifyBtn = document.getElementById('fp-identify-btn');
+    const fpIdentifyResults = document.getElementById('fp-identify-results');
+    const fpIdMatches = document.getElementById('fp-id-matches');
+    const fpBackLink = document.getElementById('fp-back-link');
     const detailImgWrap = document.getElementById('detail-img-wrap');
 
     let faceDrawForPpId = null; // if drawing for a specific existing person-row (locate mode)
@@ -1647,11 +1810,17 @@
     // --- Face person picker ---
     function showFacePicker(canvasRect, fracRect) {
       facePicker.classList.add('open');
+      currentFracRect = fracRect;
       // Position near the drawn rectangle
       facePicker.style.left = Math.min(canvasRect.x + canvasRect.w + 5, faceCanvas.width - 210) + 'px';
       facePicker.style.top = canvasRect.y + 'px';
       facePickerInput.value = '';
       facePickerInput.focus();
+      // Reset identify state
+      fpIdentifyResults.classList.remove('open');
+      fpIdMatches.innerHTML = '';
+      facePickerInput.style.display = '';
+      fpMatches.style.display = '';
       renderFacePickerMatches(fracRect);
 
       facePickerInput.oninput = () => renderFacePickerMatches(fracRect);
@@ -1725,9 +1894,81 @@
       facePicker.classList.remove('open');
       facePickerInput.value = '';
       fpMatches.innerHTML = '';
+      fpIdentifyResults.classList.remove('open');
+      fpIdMatches.innerHTML = '';
+      facePickerInput.style.display = '';
+      fpMatches.style.display = '';
       faceDrawRect = null;
       facePickerBusy = false;
     }
+
+    // --- Face identification ---
+    let currentFracRect = null;
+
+    fpIdentifyBtn.addEventListener('click', async () => {
+      if (!currentPhoto || !currentFracRect) return;
+      fpIdentifyBtn.disabled = true;
+      fpIdentifyBtn.textContent = 'Scanning...';
+      try {
+        const res = await fetch(`/api/photo/${currentPhoto.id}/identify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentFracRect)
+        });
+        const data = await res.json();
+        showIdentifyResults(data);
+      } catch (err) {
+        console.error('identify error:', err);
+      } finally {
+        fpIdentifyBtn.disabled = false;
+        fpIdentifyBtn.textContent = 'Identify';
+      }
+    });
+
+    function showIdentifyResults(data) {
+      fpIdMatches.innerHTML = '';
+      if (!data.descriptor_found) {
+        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No face detected in selection</div>';
+      } else if (data.matches.length === 0) {
+        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No reference faces to compare</div>';
+      } else {
+        const filtered = data.matches.filter(m => m.distance < 0.8);
+        if (filtered.length === 0) {
+          fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No close matches found</div>';
+        } else {
+          filtered.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'fp-id-match';
+            const color = m.distance < 0.5 ? '#27ae60' : m.distance < 0.6 ? '#f39c12' : '#888';
+            const pct = Math.max(0, Math.round((1 - m.distance) * 100));
+            div.innerHTML = `
+              <span style="flex:1">${m.name}</span>
+              <div class="fp-conf-bar"><div class="fp-conf-fill" style="width:${pct}%;background:${color}"></div></div>
+              <span class="fp-dist">${m.distance.toFixed(2)}</span>
+            `;
+            div.addEventListener('mousedown', async (e) => {
+              e.preventDefault();
+              if (facePickerBusy) return;
+              facePickerBusy = true;
+              await assignFacePerson(m.person_id, currentFracRect);
+            });
+            fpIdMatches.appendChild(div);
+          });
+        }
+      }
+      // Show results, hide search
+      fpIdentifyResults.classList.add('open');
+      facePickerInput.style.display = 'none';
+      fpMatches.style.display = 'none';
+    }
+
+    fpBackLink.addEventListener('click', () => {
+      fpIdentifyResults.classList.remove('open');
+      fpIdMatches.innerHTML = '';
+      facePickerInput.style.display = '';
+      fpMatches.style.display = '';
+      facePickerInput.focus();
+    });
 
     // Keyboard nav
     document.addEventListener('keydown', (e) => {

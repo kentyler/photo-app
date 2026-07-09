@@ -27,10 +27,10 @@ async function init() {
   initialized = true;
 }
 
-async function detectFaces(imagePath) {
+async function detectFaces(imageSource) {
   await init();
 
-  const img = await canvas.loadImage(imagePath);
+  const img = await canvas.loadImage(imageSource);
   const c = canvas.createCanvas(img.width, img.height);
   const ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0);
