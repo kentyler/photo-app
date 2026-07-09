@@ -52,7 +52,7 @@ A local web app for browsing family photos. The photos are stored in a shared Go
    DB_HOST=35.222.142.30
    DB_PORT=5432
    DB_USER=postgres
-   DB_PASSWORD=N9ykrv1o8!
+   DB_PASSWORD=<ask Ken for the password>
    DB_NAME=photoapp
    DB_SSL=require
    ```
