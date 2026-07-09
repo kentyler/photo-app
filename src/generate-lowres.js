@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const fs = require('node:fs');
 const path = require('node:path');
 const { Pool } = require('pg');
@@ -5,7 +6,7 @@ const sharp = require('sharp');
 const { scanFolder } = require('./scan-orchestrator');
 const { fileHash } = require('./file-hash');
 
-const DEFAULT_LOWRES_ROOT = 'D:/b_copies/lowres/Frances_Oliveira_and_Family';
+const DEFAULT_LOWRES_ROOT = process.env.LOWRES_ROOT || 'D:/b_copies/lowres';
 const DEFAULT_VIDEO_ROOT = 'D:/b_copies/videos';
 const MAX_DIM = 3840;
 const JPEG_QUALITY = 95;
@@ -193,6 +194,9 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
       const stat = await fs.promises.stat(outputPath);
       const sourcePrefix = `${root.charAt(0)}_${row.source_folder}`;
 
+      // Store path relative to LOWRES_ROOT
+      const relPath = outputPath.replace(/\\/g, '/').replace(LOWRES_ROOT.replace(/\\/g, '/') + '/', '');
+
       if (PHOTO_EXTS.has(ext)) {
         const meta = await sharp(outputPath).metadata();
         await pool.query(
@@ -200,7 +204,7 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
              (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, width, height, parent_id, variant_type)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'lowres')`,
           [
-            outputPath.replace(/\\/g, '/'),
+            relPath,
             sourcePrefix,
             path.basename(outputPath),
             'jpg',
@@ -219,7 +223,7 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
              (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, parent_id, variant_type)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'lowres')`,
           [
-            outputPath.replace(/\\/g, '/'),
+            relPath,
             sourcePrefix,
             path.basename(outputPath),
             outExt,

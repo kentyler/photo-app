@@ -1,9 +1,12 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const fs = require('fs');
 const sharp = require('sharp');
 const { fileHash } = require('./file-hash');
+const { cropRegion, descriptorFromCrop, findMatches, descriptorToBuffer } = require('./face-identify');
+const { resolvePath } = require('./resolve-path');
 
 const app = express();
 app.use(express.json());
@@ -24,7 +27,7 @@ app.get('/api/photos', async (req, res) => {
   if (groupId) {
     const { rows } = await pool.query(
       `SELECT f.id, f.filename, f.original_path, f.extension, f.media_type, f.taken_at,
-              f.width, f.height, f.caption, f.rating, f.source_folder
+              f.width, f.height, f.caption, f.rating, f.source_folder, f.variant_type
        FROM catalog.files f
        JOIN catalog.group_files gf ON gf.file_id = f.id
        WHERE gf.group_id = $1 AND f.media_type = 'photo' AND f.filename NOT LIKE 'x\\_%'
@@ -39,7 +42,7 @@ app.get('/api/photos', async (req, res) => {
   if (folder === '__all__') {
     const { rows } = await pool.query(
       `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
-              caption, rating, source_folder
+              caption, rating, source_folder, variant_type
        FROM catalog.files
        WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
        ORDER BY taken_at ASC NULLS LAST, filename ASC`
@@ -49,7 +52,7 @@ app.get('/api/photos', async (req, res) => {
 
   const { rows } = await pool.query(
     `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
-            caption, rating, source_folder
+            caption, rating, source_folder, variant_type
      FROM catalog.files
      WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo' AND filename NOT LIKE 'x\\_%'
      ORDER BY taken_at ASC NULLS LAST, filename ASC`,
@@ -61,12 +64,12 @@ app.get('/api/photos', async (req, res) => {
 // --- API: stream photo by id ---
 app.get('/api/photo/:id', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT original_path, extension FROM catalog.files WHERE id = $1',
+    'SELECT original_path, extension, variant_type FROM catalog.files WHERE id = $1',
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
 
-  const filePath = rows[0].original_path;
+  const filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
 
   const ext = rows[0].extension.toLowerCase();
@@ -234,40 +237,41 @@ app.put('/api/photo/:id/rename', async (req, res) => {
   if (!newName) return res.status(400).json({ error: 'newName required' });
 
   const { rows } = await pool.query(
-    'SELECT original_path, filename, extension FROM catalog.files WHERE id = $1',
+    'SELECT original_path, filename, extension, variant_type FROM catalog.files WHERE id = $1',
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
 
-  const oldPath = rows[0].original_path;
-  if (!fs.existsSync(oldPath)) return res.status(404).json({ error: 'file missing on disk' });
+  const oldDiskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
+  if (!fs.existsSync(oldDiskPath)) return res.status(404).json({ error: 'file missing on disk' });
 
-  const dir = path.dirname(oldPath);
+  const dir = path.dirname(oldDiskPath);
   const ext = rows[0].extension;
   const newFilename = newName.includes('.') ? newName : `${newName}.${ext}`;
-  const newPath = path.join(dir, newFilename);
+  const newDiskPath = path.join(dir, newFilename);
 
-  if (fs.existsSync(newPath) && newPath !== oldPath) {
+  if (fs.existsSync(newDiskPath) && newDiskPath !== oldDiskPath) {
     return res.status(409).json({ error: 'a file with that name already exists' });
   }
 
-  fs.renameSync(oldPath, newPath);
+  fs.renameSync(oldDiskPath, newDiskPath);
+  const newDbPath = path.join(path.dirname(rows[0].original_path), newFilename).replace(/\\/g, '/');
   await pool.query(
     'UPDATE catalog.files SET original_path = $1, filename = $2 WHERE id = $3',
-    [newPath, newFilename, req.params.id]
+    [newDbPath, newFilename, req.params.id]
   );
-  res.json({ ok: true, filename: newFilename, original_path: newPath });
+  res.json({ ok: true, filename: newFilename, original_path: newDbPath });
 });
 
 // --- API: convert to PNG ---
 app.post('/api/photo/:id/convert-png', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT original_path, filename, extension, source_folder FROM catalog.files WHERE id = $1',
+    'SELECT original_path, filename, extension, source_folder, variant_type FROM catalog.files WHERE id = $1',
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
 
-  const filePath = rows[0].original_path;
+  const filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
 
   const stem = path.basename(rows[0].filename, path.extname(rows[0].filename));
@@ -295,12 +299,12 @@ app.post('/api/photo/:id/resize', async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    'SELECT original_path, filename, extension, width, height, source_folder FROM catalog.files WHERE id = $1',
+    'SELECT original_path, filename, extension, width, height, source_folder, variant_type FROM catalog.files WHERE id = $1',
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
 
-  const filePath = rows[0].original_path;
+  const filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
 
   const stem = path.basename(rows[0].filename, path.extname(rows[0].filename));
@@ -366,9 +370,9 @@ app.post('/api/rotate', async (req, res) => {
 
   let filePath;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query('SELECT original_path, variant_type FROM catalog.files WHERE id = $1', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-    filePath = rows[0].original_path;
+    filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
   } else if (diskPath) {
     filePath = diskPath;
   } else {
@@ -400,12 +404,13 @@ app.post('/api/rotate', async (req, res) => {
 app.post('/api/hide', async (req, res) => {
   const { id, path: diskPath } = req.body;
 
-  let filePath, filename;
+  let filePath, filename, dbRow;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path, filename FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query('SELECT original_path, filename, variant_type FROM catalog.files WHERE id = $1', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-    filePath = rows[0].original_path;
-    filename = rows[0].filename;
+    dbRow = rows[0];
+    filePath = resolvePath(dbRow.original_path, dbRow.variant_type);
+    filename = dbRow.filename;
   } else if (diskPath) {
     filePath = diskPath;
     filename = path.basename(diskPath);
@@ -418,13 +423,14 @@ app.post('/api/hide', async (req, res) => {
 
   const dir = path.dirname(filePath);
   const newFilename = 'x_' + filename;
-  const newPath = path.join(dir, newFilename);
+  const newDiskPath = path.join(dir, newFilename);
 
-  fs.renameSync(filePath, newPath);
+  fs.renameSync(filePath, newDiskPath);
   if (id) {
+    const newDbPath = path.join(path.dirname(dbRow.original_path), newFilename).replace(/\\/g, '/');
     await pool.query(
       'UPDATE catalog.files SET original_path = $1, filename = $2 WHERE id = $3',
-      [newPath, newFilename, id]
+      [newDbPath, newFilename, id]
     );
   }
   res.json({ ok: true });
@@ -435,9 +441,9 @@ app.get('/api/file-size', async (req, res) => {
   const { id, path: diskPath } = req.query;
   let filePath;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query('SELECT original_path, variant_type FROM catalog.files WHERE id = $1', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-    filePath = rows[0].original_path;
+    filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
   } else if (diskPath) {
     filePath = diskPath;
   } else {
@@ -479,23 +485,23 @@ app.post('/api/photos/move', async (req, res) => {
 
   for (const id of fileIds) {
     const { rows } = await pool.query(
-      'SELECT original_path, filename FROM catalog.files WHERE id = $1',
+      'SELECT original_path, filename, variant_type FROM catalog.files WHERE id = $1',
       [id]
     );
     if (rows.length === 0) { errors.push({ id, error: 'not found' }); continue; }
 
-    const oldPath = rows[0].original_path;
-    if (!fs.existsSync(oldPath)) { errors.push({ id, error: 'file missing on disk' }); continue; }
+    const oldDiskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
+    if (!fs.existsSync(oldDiskPath)) { errors.push({ id, error: 'file missing on disk' }); continue; }
 
-    const newPath = path.join(targetFolder, rows[0].filename);
-    if (fs.existsSync(newPath)) { errors.push({ id, error: 'file already exists at target' }); continue; }
+    const newDiskPath = path.join(targetFolder, rows[0].filename);
+    if (fs.existsSync(newDiskPath)) { errors.push({ id, error: 'file already exists at target' }); continue; }
 
-    fs.renameSync(oldPath, newPath);
+    fs.renameSync(oldDiskPath, newDiskPath);
     await pool.query(
       'UPDATE catalog.files SET original_path = $1, source_folder = $2 WHERE id = $3',
-      [newPath, targetFolder, id]
+      [newDiskPath, targetFolder, id]
     );
-    moved.push({ id, newPath });
+    moved.push({ id, newPath: newDiskPath });
   }
 
   res.json({ ok: true, moved, errors });
@@ -700,12 +706,15 @@ app.delete('/api/people/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Relationships ---
+// --- Relationships (bidirectional storage) ---
+const INVERSE_TYPE = { parent: 'child', child: 'parent', spouse: 'spouse', sibling: 'sibling', friend: 'friend', employer: 'employee', employee: 'employer', teacher: 'student', student: 'teacher', classmate: 'classmate' };
+
 app.get('/api/people/:id/relationships', async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT r.*, p.name AS related_name FROM catalog.relationships r
-     JOIN catalog.people p ON p.id = CASE WHEN r.person_id = $1 THEN r.related_id ELSE r.person_id END
-     WHERE r.person_id = $1 OR r.related_id = $1
+    `SELECT r.*, p.name AS related_name
+     FROM catalog.relationships r
+     JOIN catalog.people p ON p.id = r.related_id
+     WHERE r.person_id = $1
      ORDER BY r.type, p.name`,
     [req.params.id]
   );
@@ -714,16 +723,54 @@ app.get('/api/people/:id/relationships', async (req, res) => {
 
 app.post('/api/relationships', async (req, res) => {
   const { person_id, related_id, type, start_date, end_date } = req.body;
-  const { rows } = await pool.query(
-    'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-    [person_id, related_id, type, start_date || null, end_date || null]
-  );
-  res.json(rows[0]);
+  const inverse = INVERSE_TYPE[type];
+  if (!inverse) return res.status(400).json({ error: 'invalid relationship type' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [person_id, related_id, type, start_date || null, end_date || null]
+    );
+    await client.query(
+      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5)',
+      [related_id, person_id, inverse, start_date || null, end_date || null]
+    );
+    await client.query('COMMIT');
+    res.json(rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 app.delete('/api/relationships/:id', async (req, res) => {
-  await pool.query('DELETE FROM catalog.relationships WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT person_id, related_id, type FROM catalog.relationships WHERE id=$1', [req.params.id]
+    );
+    if (rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'not found' }); }
+    const r = rows[0];
+    const inverse = INVERSE_TYPE[r.type];
+    await client.query('DELETE FROM catalog.relationships WHERE id=$1', [req.params.id]);
+    if (inverse) {
+      await client.query(
+        'DELETE FROM catalog.relationships WHERE person_id=$1 AND related_id=$2 AND type=$3',
+        [r.related_id, r.person_id, inverse]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 // --- Photo-People (tagging faces) ---
@@ -743,7 +790,27 @@ app.post('/api/photo/:id/people', async (req, res) => {
     'INSERT INTO catalog.photo_people (photo_id, person_id, x, y, w, h) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
     [req.params.id, person_id, x ?? null, y ?? null, w ?? null, h ?? null]
   );
-  res.json(rows[0]);
+  const pp = rows[0];
+  // Compute and store face descriptor if coordinates provided
+  if (x != null && y != null && w != null && h != null) {
+    try {
+      const { rows: fileRows } = await pool.query(
+        'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1', [req.params.id]
+      );
+      if (fileRows.length > 0) {
+        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].variant_type);
+        const cropBuf = await cropRegion(diskPath, fileRows[0].width, fileRows[0].height, { x, y, w, h });
+        const descriptor = await descriptorFromCrop(cropBuf);
+        if (descriptor) {
+          await pool.query('UPDATE catalog.photo_people SET descriptor = $1 WHERE id = $2',
+            [descriptorToBuffer(descriptor), pp.id]);
+        }
+      }
+    } catch (err) {
+      console.error('descriptor compute error (tag):', err.message);
+    }
+  }
+  res.json(pp);
 });
 
 app.put('/api/photo-people/:id', async (req, res) => {
@@ -752,7 +819,27 @@ app.put('/api/photo-people/:id', async (req, res) => {
     'UPDATE catalog.photo_people SET x=$1, y=$2, w=$3, h=$4 WHERE id=$5 RETURNING *',
     [x ?? null, y ?? null, w ?? null, h ?? null, req.params.id]
   );
-  res.json(rows[0]);
+  const pp = rows[0];
+  // Recompute descriptor when coordinates change
+  if (pp && x != null && y != null && w != null && h != null) {
+    try {
+      const { rows: fileRows } = await pool.query(
+        'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1', [pp.photo_id]
+      );
+      if (fileRows.length > 0) {
+        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].variant_type);
+        const cropBuf = await cropRegion(diskPath, fileRows[0].width, fileRows[0].height, { x, y, w, h });
+        const descriptor = await descriptorFromCrop(cropBuf);
+        if (descriptor) {
+          await pool.query('UPDATE catalog.photo_people SET descriptor = $1 WHERE id = $2',
+            [descriptorToBuffer(descriptor), pp.id]);
+        }
+      }
+    } catch (err) {
+      console.error('descriptor compute error (locate):', err.message);
+    }
+  }
+  res.json(pp);
 });
 
 app.delete('/api/photo-people/:id', async (req, res) => {
@@ -846,6 +933,34 @@ app.post('/api/photo/:id/things', async (req, res) => {
 app.delete('/api/photo-things/:id', async (req, res) => {
   await pool.query('DELETE FROM catalog.photo_things WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
+});
+
+// --- Face identification ---
+app.post('/api/photo/:id/identify', async (req, res) => {
+  const { x, y, w, h } = req.body;
+  if (x == null || y == null || w == null || h == null) {
+    return res.status(400).json({ error: 'x, y, w, h are required' });
+  }
+  const { rows } = await pool.query(
+    'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1',
+    [req.params.id]
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+  const { width, height } = rows[0];
+  const diskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
+
+  try {
+    const cropBuf = await cropRegion(diskPath, width, height, { x, y, w, h });
+    const descriptor = await descriptorFromCrop(cropBuf);
+    if (!descriptor) {
+      return res.json({ descriptor_found: false, matches: [] });
+    }
+    const matches = await findMatches(pool, descriptor);
+    res.json({ descriptor_found: true, matches });
+  } catch (err) {
+    console.error('identify error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Global error handler (return JSON, not HTML) ---
