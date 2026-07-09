@@ -13,10 +13,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const pool = new Pool({
-  host: 'localhost',
-  user: 'postgres',
-  password: '7297',
-  database: 'photoapp'
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '7297',
+  database: process.env.DB_NAME || 'photoapp',
+  ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : false,
 });
 
 // --- API: list photos by folder or group ---
