@@ -583,7 +583,7 @@
     <button id="docs-close">&times;</button>
     <div id="docs-panel">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h4 style="margin:0;font-size:0.95rem;color:var(--text-muted);">Documents</h4>
+        <h4 style="margin:0;font-size:0.95rem;color:var(--text-muted);"><a href="#" id="docs-home" style="color:var(--link-color);text-decoration:none;margin-right:0.75rem;">&larr; Home</a> Documents</h4>
         <button id="docs-new-btn" style="padding:0.25rem 0.6rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">+ New</button>
       </div>
       <input class="doc-search" id="doc-search" placeholder="Search documents...">
@@ -623,6 +623,7 @@
   <div id="hb-overlay">
     <div id="hb-dialog">
       <div class="hb-header">
+        <a href="#" id="hb-home" style="color:var(--link-color);text-decoration:none;font-size:0.9rem;">&larr; Home</a>
         <h3>History & Bookmarks</h3>
         <button id="hb-close">&times;</button>
       </div>
@@ -2483,6 +2484,10 @@
     document.getElementById('docs-close').addEventListener('click', () => {
       docsOverlay.classList.remove('active');
     });
+    document.getElementById('docs-home').addEventListener('click', (e) => {
+      e.preventDefault();
+      docsOverlay.classList.remove('active');
+    });
 
     async function refreshDocList() {
       await loadAllDocuments();
@@ -2883,6 +2888,10 @@
       renderHBContent();
     });
     hbClose.addEventListener('click', () => hbOverlay.classList.remove('active'));
+    document.getElementById('hb-home').addEventListener('click', (e) => {
+      e.preventDefault();
+      hbOverlay.classList.remove('active');
+    });
     hbOverlay.addEventListener('click', (e) => { if (e.target === hbOverlay) hbOverlay.classList.remove('active'); });
 
     // Bookmark photo button
