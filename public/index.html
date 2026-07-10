@@ -292,10 +292,6 @@
     @keyframes mic-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     /* File-ops section in detail */
-    .fileops-section { margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .fileops-section button { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .fileops-section button:hover { background: var(--accent); }
-    .fileops-section .status-msg { font-size: 0.8rem; color: var(--success); width: 100%; margin-top: 0.3rem; }
 
 
     /* Group picker dialog */
@@ -519,13 +515,6 @@
         <button data-rating="">Clear</button>
       </div>
 
-      <div class="fileops-section">
-        <button id="btn-convert-png">Convert to PNG</button>
-        <button id="btn-resize-print">Resize (Print)</button>
-        <button id="btn-resize-screen">Resize (Screen)</button>
-        <button id="btn-resize-both">Resize (Both)</button>
-        <div class="status-msg" id="fileops-status"></div>
-      </div>
       <div class="detail-nav-bottom">
         <button id="detail-prev-bottom">&lt; Prev</button>
         <button id="close-detail-bottom">Close</button>
@@ -2274,49 +2263,6 @@
       selectAllCb.checked = false;
       updateSelectionUI();
     });
-
-    // --- File ops (detail modal) ---
-    const fileopStatus = document.getElementById('fileops-status');
-
-    document.getElementById('btn-convert-png').addEventListener('click', async () => {
-      if (!currentPhoto || !currentPhoto.id) return;
-      fileopStatus.textContent = 'Converting to PNG...';
-      const res = await fetch(`/api/photo/${currentPhoto.id}/convert-png`, { method: 'POST' });
-      const data = await res.json();
-      if (data.ok) {
-        fileopStatus.textContent = `PNG created (${data.width}x${data.height})`;
-      } else {
-        fileopStatus.textContent = 'Error: ' + (data.error || 'convert failed');
-        fileopStatus.className = 'status-msg status-error';
-      }
-      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.className = 'status-msg status-ok'; }, 3000);
-    });
-
-    async function doResize(mode) {
-      if (!currentPhoto || !currentPhoto.id) return;
-      fileopStatus.textContent = `Resizing (${mode})...`;
-      const res = await fetch(`/api/photo/${currentPhoto.id}/resize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const parts = [];
-        data.results.forEach(r => parts.push(`${r.mode}: ${r.width}x${r.height}`));
-        data.skipped.forEach(s => parts.push(`${s.mode}: skipped (${s.reason})`));
-        fileopStatus.textContent = parts.join(' | ');
-      } else {
-        fileopStatus.textContent = 'Error: ' + (data.error || 'resize failed');
-        fileopStatus.className = 'status-msg status-error';
-      }
-      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.className = 'status-msg status-ok'; }, 5000);
-    }
-
-    document.getElementById('btn-resize-print').addEventListener('click', () => doResize('print'));
-    document.getElementById('btn-resize-screen').addEventListener('click', () => doResize('screen'));
-    document.getElementById('btn-resize-both').addEventListener('click', () => doResize('both'));
-
 
     // --- Add to group ---
     const groupPickerOverlay = document.getElementById('group-picker-overlay');
