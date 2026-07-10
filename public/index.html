@@ -5,86 +5,165 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Photo Triage</title>
   <style>
+    :root {
+      --bg-body: #1a1a2e;
+      --bg-panel: #16213e;
+      --bg-input: #0f3460;
+      --border-accent: #533483;
+      --accent: #533483;
+      --accent-hover: #6c44a0;
+      --accent-bright: #8e44ad;
+      --text-primary: #eee;
+      --text-muted: #aaa;
+      --text-dim: #888;
+      --text-dimmer: #666;
+      --text-faint: #555;
+      --link-color: #8e94f2;
+      --link-hover: #aab0ff;
+      --success: #27ae60;
+      --danger: #c0392b;
+      --danger-bright: #e74c3c;
+      --danger-hover: #ff6b6b;
+      --danger-bg: #5a1a1a;
+      --danger-bg-hover: #7a2a2a;
+      --warning: #e67e22;
+      --overlay-bg: rgba(0,0,0,0.85);
+      --overlay-bg-light: rgba(0,0,0,0.7);
+      --shadow: rgba(0,0,0,0.5);
+      --cancel-bg: #333;
+      --identify-bg: #0a4d2e;
+      --identify-text: #7fdb9a;
+      --identify-hover: #0e6b3e;
+      --scrollbar-track: #0f3460;
+      --scrollbar-thumb: #533483;
+      --scrollbar-thumb-hover: #6c44a0;
+      --badge-keep: #27ae60;
+      --badge-dup: #e67e22;
+      --badge-skip: #c0392b;
+      --folder-badge-bg: rgba(0,0,0,0.7);
+      --folder-badge-text: #ccc;
+    }
+    [data-theme="light"] {
+      --bg-body: #f0f2f5;
+      --bg-panel: #ffffff;
+      --bg-input: #e8edf2;
+      --border-accent: #c5cdd8;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --accent-bright: #a855f7;
+      --text-primary: #1a1a2e;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --text-dimmer: #94a3b8;
+      --text-faint: #cbd5e1;
+      --link-color: #7c3aed;
+      --link-hover: #6d28d9;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --danger-bright: #ef4444;
+      --danger-hover: #f87171;
+      --danger-bg: #fee2e2;
+      --danger-bg-hover: #fecaca;
+      --warning: #ea580c;
+      --overlay-bg: rgba(0,0,0,0.5);
+      --overlay-bg-light: rgba(0,0,0,0.3);
+      --shadow: rgba(0,0,0,0.15);
+      --cancel-bg: #d1d5db;
+      --identify-bg: #dcfce7;
+      --identify-text: #166534;
+      --identify-hover: #bbf7d0;
+      --scrollbar-track: #e5e7eb;
+      --scrollbar-thumb: #9ca3af;
+      --scrollbar-thumb-hover: #6b7280;
+      --badge-keep: #16a34a;
+      --badge-dup: #ea580c;
+      --badge-skip: #dc2626;
+      --folder-badge-bg: rgba(0,0,0,0.5);
+      --folder-badge-text: #fff;
+    }
+    .status-ok { color: var(--success); }
+    .status-error { color: var(--danger); }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-body); color: var(--text-primary); }
 
     /* Header */
-    header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; background: #16213e; border-bottom: 1px solid #0f3460; }
+    header { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; background: var(--bg-panel); border-bottom: 1px solid var(--bg-input); }
     header h1 { font-size: 1.2rem; font-weight: 600; }
-    #group-select { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
+    #group-select { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; }
     /* Custom folder dropdown */
     #folder-dropdown { position: relative; }
-    #folder-btn { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; cursor: pointer; min-width: 200px; text-align: left; white-space: nowrap; }
-    #folder-btn:hover { background: #533483; }
+    #folder-btn { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; cursor: pointer; min-width: 200px; text-align: left; white-space: nowrap; }
+    #folder-btn:hover { background: var(--accent); }
     #folder-btn::after { content: ' \25BE'; }
     /* (folder-list styles are in the tree dropdown section below) */
-    #filter-rating { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
-    #filter-tag { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.9rem; }
-    .photo-count { font-size: 0.85rem; color: #aaa; margin-left: auto; }
+    #filter-rating { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; }
+    #filter-tag { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; }
+    .photo-count { font-size: 0.85rem; color: var(--text-muted); margin-left: auto; }
 
     /* Grid */
     #photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(256px, 1fr)); gap: 0.5rem; padding: 1rem; }
-    .photo-card { position: relative; cursor: pointer; border-radius: 4px; overflow: hidden; background: #0f3460; }
+    .photo-card { position: relative; cursor: pointer; border-radius: 4px; overflow: hidden; background: var(--bg-input); }
     .photo-card img { width: 100%; height: 256px; object-fit: cover; display: block; }
     .photo-card .rating-badge { position: absolute; top: 6px; right: 6px; padding: 2px 8px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-    .rating-keep { background: #27ae60; }
-    .rating-duplicate { background: #e67e22; }
-    .rating-skip { background: #c0392b; }
-    .photo-card .folder-badge { position: absolute; bottom: 6px; left: 6px; padding: 2px 6px; background: rgba(0,0,0,0.7); border-radius: 3px; font-size: 0.65rem; color: #ccc; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .photo-card:hover { outline: 2px solid #533483; }
+    .rating-keep { background: var(--badge-keep); }
+    .rating-duplicate { background: var(--badge-dup); }
+    .rating-skip { background: var(--badge-skip); }
+    .photo-card .folder-badge { position: absolute; bottom: 6px; left: 6px; padding: 2px 6px; background: var(--folder-badge-bg); border-radius: 3px; font-size: 0.65rem; color: var(--folder-badge-text); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .photo-card:hover { outline: 2px solid var(--accent); }
 
     /* Detail modal */
-    #detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; overflow-y: auto; }
+    #detail-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg); z-index: 100; overflow-y: auto; }
     #detail-overlay.active { display: flex; justify-content: center; align-items: flex-start; padding: 2rem; gap: 1rem; }
-    #detail-panel { background: #16213e; border-radius: 8px; max-width: 900px; width: 100%; padding: 1.5rem; }
-    #people-sidebar { background: #16213e; border-radius: 8px; width: 240px; min-width: 240px; padding: 1rem; position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; }
-    #people-sidebar h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: #aaa; }
+    #detail-panel { background: var(--bg-panel); border-radius: 8px; max-width: 900px; width: 100%; padding: 1.5rem; }
+    #people-sidebar { background: var(--bg-panel); border-radius: 8px; width: 240px; min-width: 240px; padding: 1rem; position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; }
+    #people-sidebar h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--text-muted); }
     .people-list { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
-    .people-list .person-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: #0f3460; border-radius: 4px; font-size: 0.85rem; }
-    .people-list .person-row button { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 0 0.3rem; color: #aaa; }
-    .people-list .person-row button:hover { color: #eee; }
-    .people-list .person-row .remove-person { color: #e74c3c; font-size: 1.1rem; font-weight: 700; }
-    .people-list .person-row .remove-person:hover { color: #ff6b6b; }
+    .people-list .person-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.85rem; }
+    .people-list .person-row button { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 0 0.3rem; color: var(--text-muted); }
+    .people-list .person-row button:hover { color: var(--text-primary); }
+    .people-list .person-row .remove-person { color: var(--danger-bright); font-size: 1.1rem; font-weight: 700; }
+    .people-list .person-row .remove-person:hover { color: var(--danger-hover); }
     .sidebar-combo { position: relative; }
-    .sidebar-combo input { width: 100%; padding: 0.3rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.8rem; }
-    .sidebar-combo .combo-matches { position: absolute; left: 0; right: 0; top: 100%; background: #0f3460; border: 1px solid #533483; border-top: none; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 10; display: none; }
+    .sidebar-combo input { width: 100%; padding: 0.3rem 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.8rem; }
+    .sidebar-combo .combo-matches { position: absolute; left: 0; right: 0; top: 100%; background: var(--bg-input); border: 1px solid var(--border-accent); border-top: none; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 10; display: none; }
     .sidebar-combo .combo-matches.open { display: block; }
     .sidebar-combo .combo-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; }
-    .sidebar-combo .combo-match:hover { background: #533483; }
-    .sidebar-combo .combo-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
-    .sidebar-combo .combo-create:hover { background: #533483; }
+    .sidebar-combo .combo-match:hover { background: var(--accent); }
+    .sidebar-combo .combo-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: var(--success); border-top: 1px solid var(--border-accent); }
+    .sidebar-combo .combo-create:hover { background: var(--accent); }
     #detail-panel > .zoom-controls { display: flex; justify-content: center; }
-    #detail-panel h3 { margin-bottom: 1rem; font-size: 1rem; color: #aaa; }
+    #detail-panel h3 { margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted); }
 
     /* Caption */
     .caption-section { margin-bottom: 1rem; }
-    .caption-section textarea { width: 100%; padding: 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; resize: vertical; min-height: 60px; font-family: inherit; }
-    .caption-section button { margin-top: 0.4rem; padding: 0.4rem 1rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-    .caption-section button:hover { background: #6c44a0; }
+    .caption-section textarea { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; resize: vertical; min-height: 60px; font-family: inherit; }
+    .caption-section button { margin-top: 0.4rem; padding: 0.4rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .caption-section button:hover { background: var(--accent-hover); }
 
     /* Rating */
     .rating-section { margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; }
-    .rating-section button { padding: 0.4rem 1rem; border: 1px solid #533483; background: transparent; color: #eee; border-radius: 4px; cursor: pointer; }
-    .rating-section button.active { background: #533483; font-weight: 600; }
-    .rating-section button:hover { background: #533483; }
+    .rating-section button { padding: 0.4rem 1rem; border: 1px solid var(--border-accent); background: transparent; color: var(--text-primary); border-radius: 4px; cursor: pointer; }
+    .rating-section button.active { background: var(--accent); font-weight: 600; }
+    .rating-section button:hover { background: var(--accent); }
 
     /* Tags */
     .tags-section { margin-bottom: 1rem; }
     .tags-section .tag-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .tag-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; background: #533483; border-radius: 12px; font-size: 0.8rem; }
+    .tag-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; background: var(--accent); border-radius: 12px; font-size: 0.8rem; }
     .tag-pill .remove-tag { cursor: pointer; opacity: 0.7; }
     .tag-pill .remove-tag:hover { opacity: 1; }
     .tag-input-row { display: flex; gap: 0.4rem; }
-    .tag-input-row input { flex: 1; padding: 0.4rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; }
-    .tag-input-row button { padding: 0.4rem 0.8rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .tag-input-row input { flex: 1; padding: 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; }
+    .tag-input-row button { padding: 0.4rem 0.8rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; }
 
     /* Close button */
     .detail-nav { position: absolute; top: 0.75rem; right: 1rem; display: flex; gap: 0.3rem; }
-    .detail-nav button { padding: 0.3rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .detail-nav button:hover { background: #533483; }
+    .detail-nav button { padding: 0.3rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .detail-nav button:hover { background: var(--accent); }
     .detail-nav-bottom { display: flex; justify-content: center; gap: 0.4rem; margin: 1rem auto 0; }
-    .detail-nav-bottom button { padding: 0.4rem 1.2rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-    .detail-nav-bottom button:hover { background: #533483; }
+    .detail-nav-bottom button { padding: 0.4rem 1.2rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+    .detail-nav-bottom button:hover { background: var(--accent); }
 
     /* Lightbox */
     #lightbox { display: none; position: fixed; inset: 0; background: #000; z-index: 200; user-select: none; }
@@ -98,174 +177,242 @@
     .lb-close:hover { color: #ccc; }
 
     /* Context menu */
-    #ctx-menu { display: none; position: fixed; z-index: 300; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.3rem 0; box-shadow: 0 4px 16px rgba(0,0,0,0.5); min-width: 150px; }
-    #ctx-menu button { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: #eee; font-size: 0.85rem; text-align: left; cursor: pointer; }
-    #ctx-menu button:hover { background: #533483; }
-    .lb-counter { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); color: #aaa; font-size: 0.9rem; }
-    .lb-filesize { position: absolute; bottom: 1rem; right: 1.5rem; color: #aaa; font-size: 0.85rem; }
+    #ctx-menu { display: none; position: fixed; z-index: 300; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 6px; padding: 0.3rem 0; box-shadow: 0 4px 16px var(--shadow); min-width: 150px; }
+    #ctx-menu button { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; text-align: left; cursor: pointer; }
+    #ctx-menu button:hover { background: var(--accent); }
+    .lb-counter { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); color: var(--text-muted); font-size: 0.9rem; }
+    .lb-filesize { position: absolute; bottom: 1rem; right: 1.5rem; color: var(--text-muted); font-size: 0.85rem; }
 
     /* Face region overlay */
     .detail-img-viewport { position: relative; overflow: auto; max-height: 600px; margin: 0 auto 1rem; border-radius: 4px; cursor: grab; }
     .detail-img-viewport:active { cursor: grabbing; }
     .detail-img-viewport::-webkit-scrollbar { width: 6px; height: 6px; }
-    .detail-img-viewport::-webkit-scrollbar-track { background: #0f3460; }
-    .detail-img-viewport::-webkit-scrollbar-thumb { background: #533483; border-radius: 3px; }
+    .detail-img-viewport::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .detail-img-viewport::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
     .detail-img-wrap { position: relative; display: inline-block; transform-origin: 0 0; }
     .detail-img-wrap img { display: block; border-radius: 4px; max-width: none; }
     .zoom-controls { display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0.4rem; }
-    .zoom-controls button { padding: 0.2rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .zoom-controls button:hover { background: #533483; }
-    .zoom-controls .zoom-level { font-size: 0.75rem; color: #aaa; min-width: 3rem; text-align: center; }
+    .zoom-controls button { padding: 0.2rem 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .zoom-controls button:hover { background: var(--accent); }
+    .zoom-controls .zoom-level { font-size: 0.75rem; color: var(--text-muted); min-width: 3rem; text-align: center; }
     #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; display: none; }
     #face-canvas.faces-on { display: block; pointer-events: auto; cursor: pointer; }
     #face-canvas.draw-mode { cursor: crosshair; }
-    #tag-face-btn { padding: 0.15rem 0.5rem; background: #0f3460; color: #aaa; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 400; }
-    #tag-face-btn:hover { background: #533483; color: #eee; }
-    #tag-face-btn.active { background: #533483; color: #fff; font-weight: 600; }
+    #tag-face-btn { padding: 0.15rem 0.5rem; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 400; }
+    #tag-face-btn:hover { background: var(--accent); color: var(--text-primary); }
+    #tag-face-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
     /* Face person picker (floats near drawn rect) */
-    #face-picker { display: none; position: absolute; z-index: 10; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.4rem; width: 200px; }
+    #face-picker { display: none; position: absolute; z-index: 10; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 6px; padding: 0.4rem; width: 200px; }
     #face-picker.open { display: block; }
-    #face-picker input { width: 100%; padding: 0.3rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    #face-picker input { width: 100%; padding: 0.3rem 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.3rem; }
     #face-picker .fp-matches { max-height: 120px; overflow-y: auto; }
     #face-picker .fp-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-radius: 3px; }
-    #face-picker .fp-match:hover { background: #533483; }
-    #face-picker .fp-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: #27ae60; border-top: 1px solid #533483; }
-    #face-picker .fp-create:hover { background: #533483; }
+    #face-picker .fp-match:hover { background: var(--accent); }
+    #face-picker .fp-create { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; color: var(--success); border-top: 1px solid var(--border-accent); }
+    #face-picker .fp-create:hover { background: var(--accent); }
     /* Face identify button and results */
-    #fp-identify-btn { width: 100%; padding: 0.3rem; background: #0a4d2e; color: #7fdb9a; border: 1px solid #27ae60; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 0.3rem; }
-    #fp-identify-btn:hover { background: #0e6b3e; color: #fff; }
+    #fp-identify-btn { width: 100%; padding: 0.3rem; background: var(--identify-bg); color: var(--identify-text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    #fp-identify-btn:hover { background: var(--identify-hover); }
     #fp-identify-btn:disabled { opacity: 0.5; cursor: wait; }
     #fp-identify-results { display: none; }
     #fp-identify-results.open { display: block; }
     .fp-id-match { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-radius: 3px; display: flex; align-items: center; gap: 0.4rem; }
-    .fp-id-match:hover { background: #533483; }
-    .fp-id-match .fp-conf-bar { flex: 0 0 40px; height: 6px; border-radius: 3px; background: #333; overflow: hidden; }
+    .fp-id-match:hover { background: var(--accent); }
+    .fp-id-match .fp-conf-bar { flex: 0 0 40px; height: 6px; border-radius: 3px; background: var(--cancel-bg); overflow: hidden; }
     .fp-id-match .fp-conf-fill { height: 100%; border-radius: 3px; }
-    .fp-id-match .fp-dist { font-size: 0.7rem; color: #888; min-width: 30px; text-align: right; }
-    #fp-back-link { font-size: 0.75rem; color: #8e94f2; cursor: pointer; margin-top: 0.3rem; display: inline-block; }
+    .fp-id-match .fp-dist { font-size: 0.7rem; color: var(--text-dim); min-width: 30px; text-align: right; }
+    #fp-back-link { font-size: 0.75rem; color: var(--link-color); cursor: pointer; margin-top: 0.3rem; display: inline-block; }
     #fp-back-link:hover { text-decoration: underline; }
     /* Sidebar person row enhancements */
     .person-row .face-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; flex-shrink: 0; }
-    .person-row .locate-btn { background: none; border: none; color: #8e94f2; cursor: pointer; font-size: 0.85rem; padding: 0 0.3rem; }
-    .person-row .locate-btn:hover { color: #aab0ff; }
-    @keyframes flash-highlight { 0%,100% { background: #0f3460; } 50% { background: #533483; } }
+    .person-row .locate-btn { background: none; border: none; color: var(--link-color); cursor: pointer; font-size: 0.85rem; padding: 0 0.3rem; }
+    .person-row .locate-btn:hover { color: var(--link-hover); }
+    @keyframes flash-highlight { 0%,100% { background: var(--bg-input); } 50% { background: var(--accent); } }
     .person-row.flash { animation: flash-highlight 0.4s ease 3; }
     /* Person remove popup */
-    #person-remove-popup { display: none; position: fixed; z-index: 160; background: #16213e; border: 1px solid #533483; border-radius: 6px; padding: 0.75rem; box-shadow: 0 4px 16px rgba(0,0,0,0.6); width: 220px; }
+    #person-remove-popup { display: none; position: fixed; z-index: 160; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 6px; padding: 0.75rem; box-shadow: 0 4px 16px var(--shadow); width: 220px; }
     #person-remove-popup.open { display: block; }
-    #person-remove-popup .prp-name { font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem; text-align: center; }
+    #person-remove-popup .prp-name { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; text-align: center; }
     #person-remove-popup button { display: block; width: 100%; padding: 0.4rem 0.6rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 0.3rem; text-align: left; }
-    #person-remove-popup .prp-unlink { background: #0f3460; color: #eee; }
-    #person-remove-popup .prp-unlink:hover { background: #533483; }
-    #person-remove-popup .prp-delete { background: #5a1a1a; color: #e74c3c; }
-    #person-remove-popup .prp-delete:hover { background: #7a2a2a; }
-    #person-remove-popup .prp-cancel { background: transparent; color: #aaa; text-align: center; }
-    #person-remove-popup .prp-cancel:hover { color: #eee; }
+    #person-remove-popup .prp-unlink { background: var(--bg-input); color: var(--text-primary); }
+    #person-remove-popup .prp-unlink:hover { background: var(--accent); }
+    #person-remove-popup .prp-delete { background: var(--danger-bg); color: var(--danger-bright); }
+    #person-remove-popup .prp-delete:hover { background: var(--danger-bg-hover); }
+    #person-remove-popup .prp-cancel { background: transparent; color: var(--text-muted); text-align: center; }
+    #person-remove-popup .prp-cancel:hover { color: var(--text-primary); }
 
     /* Person detail popup (relationships) */
-    #person-detail-popup { display: none; position: fixed; z-index: 170; background: #16213e; border: 1px solid #533483; border-radius: 8px; padding: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.7); width: 320px; max-height: 80vh; overflow-y: auto; }
+    #person-detail-popup { display: none; position: fixed; z-index: 170; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 20px var(--shadow); width: 320px; max-height: 80vh; overflow-y: auto; }
     #person-detail-popup.open { display: block; }
-    #person-detail-popup h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #eee; }
+    #person-detail-popup h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--text-primary); }
     .pdp-rels { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
-    .pdp-rel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: #0f3460; border-radius: 4px; font-size: 0.85rem; }
-    .pdp-rel-row .rel-label { color: #8e94f2; margin-right: 0.4rem; }
-    .pdp-rel-row .rel-delete { background: none; border: none; color: #e74c3c; font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
-    .pdp-rel-row .rel-delete:hover { color: #ff6b6b; }
+    .pdp-rel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.85rem; }
+    .pdp-rel-row .rel-label { color: var(--link-color); margin-right: 0.4rem; }
+    .pdp-rel-row .rel-delete { background: none; border: none; color: var(--danger-bright); font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
+    .pdp-rel-row .rel-delete:hover { color: var(--danger-hover); }
     .pdp-add-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem; }
-    .pdp-add-row select { background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; }
+    .pdp-add-row select { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; }
     .pdp-add-row .pdp-person-wrap { position: relative; flex: 1; }
-    .pdp-add-row input { width: 100%; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.8rem; box-sizing: border-box; }
-    .pdp-matches { position: absolute; top: 100%; left: 0; right: 0; background: #16213e; border: 1px solid #533483; border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 180; display: none; }
+    .pdp-add-row input { width: 100%; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.8rem; box-sizing: border-box; }
+    .pdp-matches { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 180; display: none; }
     .pdp-matches.open { display: block; }
     .pdp-matches div { padding: 0.3rem 0.5rem; font-size: 0.8rem; cursor: pointer; }
-    .pdp-matches div:hover { background: #533483; }
-    .pdp-close { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 0.8rem; padding: 0.3rem 0.6rem; display: block; margin: 0 auto; }
-    .pdp-close:hover { color: #eee; }
+    .pdp-matches div:hover { background: var(--accent); }
+    .pdp-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 0.3rem 0.6rem; display: block; margin: 0 auto; }
+    .pdp-close:hover { color: var(--text-primary); }
 
     /* Multi-select checkbox */
-    .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: #533483; cursor: pointer; z-index: 10; }
-    .photo-card.selected { outline: 3px solid #8e44ad; }
+    .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; z-index: 10; }
+    .photo-card.selected { outline: 3px solid var(--accent-bright); }
 
     /* Selection toolbar */
-    #selection-toolbar { display: none; position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #16213e; border: 1px solid #533483; border-radius: 8px; padding: 0.6rem 1.2rem; z-index: 90; display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    #selection-toolbar { display: none; position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 8px; padding: 0.6rem 1.2rem; z-index: 90; display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 20px var(--shadow); }
     #selection-toolbar.active { display: flex; }
-    #selection-toolbar .sel-count { font-size: 0.9rem; color: #aaa; }
-    #selection-toolbar button { padding: 0.4rem 0.8rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    #selection-toolbar button:hover { background: #6c44a0; }
-    #selection-toolbar button.danger { background: #c0392b; }
-    #selection-toolbar button.danger:hover { background: #e74c3c; }
+    #selection-toolbar .sel-count { font-size: 0.9rem; color: var(--text-muted); }
+    #selection-toolbar button { padding: 0.4rem 0.8rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    #selection-toolbar button:hover { background: var(--accent-hover); }
+    #selection-toolbar button.danger { background: var(--danger); }
+    #selection-toolbar button.danger:hover { background: var(--danger-bright); }
 
     /* Text entries section */
     .texts-section { margin-bottom: 1rem; }
     .texts-nav { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
-    .texts-nav button { padding: 0.25rem 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.8rem; min-width: 28px; }
-    .texts-nav button:hover { background: #533483; }
-    .texts-nav .texts-counter { font-size: 0.85rem; color: #aaa; margin: 0 0.3rem; }
+    .texts-nav button { padding: 0.25rem 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.8rem; min-width: 28px; }
+    .texts-nav button:hover { background: var(--accent); }
+    .texts-nav .texts-counter { font-size: 0.85rem; color: var(--text-muted); margin: 0 0.3rem; }
     .texts-nav .texts-spacer { flex: 1; }
-    .texts-section textarea { width: 100%; padding: 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; resize: vertical; min-height: 150px; font-family: inherit; }
+    .texts-section textarea { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; resize: vertical; min-height: 150px; font-family: inherit; }
     .texts-section .texts-actions { margin-top: 0.4rem; display: flex; gap: 0.4rem; }
-    .texts-section .texts-actions button { padding: 0.4rem 1rem; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-    .texts-section .texts-actions button:hover { background: #6c44a0; }
-    .texts-section .texts-actions button.danger { background: #c0392b; }
-    .texts-section .texts-actions button.danger:hover { background: #e74c3c; }
+    .texts-section .texts-actions button { padding: 0.4rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .texts-section .texts-actions button:hover { background: var(--accent-hover); }
+    .texts-section .texts-actions button.danger { background: var(--danger); }
+    .texts-section .texts-actions button.danger:hover { background: var(--danger-bright); }
     #txt-mic { font-size: 1.1rem; padding: 0.4rem 0.7rem; }
-    #txt-mic.recording { background: #c0392b; animation: mic-pulse 1s ease-in-out infinite; }
+    #txt-mic.recording { background: var(--danger); animation: mic-pulse 1s ease-in-out infinite; }
     @keyframes mic-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     /* File-ops section in detail */
     .fileops-section { margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .fileops-section button { padding: 0.4rem 0.8rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .fileops-section button:hover { background: #533483; }
-    .fileops-section .status-msg { font-size: 0.8rem; color: #27ae60; width: 100%; margin-top: 0.3rem; }
+    .fileops-section button { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .fileops-section button:hover { background: var(--accent); }
+    .fileops-section .status-msg { font-size: 0.8rem; color: var(--success); width: 100%; margin-top: 0.3rem; }
 
-    /* Folder picker dialog */
-    #folder-picker-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; }
-    #folder-picker-overlay.active { display: flex; justify-content: center; align-items: center; }
-    #folder-picker-dialog { background: #16213e; border-radius: 8px; padding: 1.5rem; min-width: 400px; }
-    #folder-picker-dialog h3 { margin-bottom: 1rem; }
-    #folder-picker-dialog input { width: 100%; padding: 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; margin-bottom: 0.5rem; }
-    #folder-picker-dialog .folder-list { max-height: 200px; overflow-y: auto; margin-bottom: 1rem; }
-    #folder-picker-dialog .folder-option { padding: 0.4rem 0.6rem; cursor: pointer; border-radius: 4px; font-size: 0.9rem; }
-    #folder-picker-dialog .folder-option:hover { background: #533483; }
-    #folder-picker-dialog .btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; }
-    #folder-picker-dialog .btn-row button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    #folder-picker-dialog .btn-move { background: #533483; color: #fff; }
-    #folder-picker-dialog .btn-cancel { background: #333; color: #eee; }
 
     /* Group picker dialog */
-    #group-picker-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; }
+    #group-picker-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg-light); z-index: 150; }
     #group-picker-overlay.active { display: flex; justify-content: center; align-items: center; }
-    #group-picker-dialog { background: #16213e; border-radius: 8px; padding: 1.5rem; min-width: 400px; }
+    #group-picker-dialog { background: var(--bg-panel); border-radius: 8px; padding: 1.5rem; min-width: 400px; }
     #group-picker-dialog h3 { margin-bottom: 1rem; }
-    #group-picker-dialog input { width: 100%; padding: 0.5rem; background: #0f3460; color: #eee; border: 1px solid #533483; border-radius: 4px; margin-bottom: 0.5rem; }
+    #group-picker-dialog input { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; margin-bottom: 0.5rem; }
     #group-picker-dialog .group-list { max-height: 200px; overflow-y: auto; margin-bottom: 1rem; }
     #group-picker-dialog .group-option { padding: 0.4rem 0.6rem; cursor: pointer; border-radius: 4px; font-size: 0.9rem; }
-    #group-picker-dialog .group-option:hover { background: #533483; }
-    #group-picker-dialog .group-option.selected { background: #533483; }
+    #group-picker-dialog .group-option:hover { background: var(--accent); }
+    #group-picker-dialog .group-option.selected { background: var(--accent); }
     #group-picker-dialog .btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; }
     #group-picker-dialog .btn-row button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    #group-picker-dialog .btn-add { background: #533483; color: #fff; }
-    #group-picker-dialog .btn-cancel { background: #333; color: #eee; }
-    .header-sep { color: #533483; font-size: 0.9rem; }
+    #group-picker-dialog .btn-add { background: var(--accent); color: #fff; }
+    #group-picker-dialog .btn-cancel { background: var(--cancel-bg); color: var(--text-primary); }
+    .header-sep { color: var(--border-accent); font-size: 0.9rem; }
 
     /* Folder tree dropdown */
-    #folder-list { display: none; position: absolute; top: 100%; left: 0; width: 400px; max-height: 60vh; background: #16213e; border: 1px solid #533483; border-radius: 4px; z-index: 50; margin-top: 2px; overflow: hidden; display: none; flex-direction: column; }
+    #folder-list { display: none; position: absolute; top: 100%; left: 0; width: 400px; max-height: 60vh; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 4px; z-index: 50; margin-top: 2px; overflow: hidden; display: none; flex-direction: column; }
     #folder-list.open { display: flex; }
-    #folder-list .fl-breadcrumb { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.4rem 0.6rem; align-items: center; font-size: 0.8rem; border-bottom: 1px solid #0f3460; }
-    #folder-list .fl-crumb { color: #8e94f2; cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 3px; }
-    #folder-list .fl-crumb:hover { background: #533483; }
-    #folder-list .fl-sep { color: #555; }
+    #folder-list .fl-breadcrumb { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.4rem 0.6rem; align-items: center; font-size: 0.8rem; border-bottom: 1px solid var(--bg-input); }
+    #folder-list .fl-crumb { color: var(--link-color); cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    #folder-list .fl-crumb:hover { background: var(--accent); }
+    #folder-list .fl-sep { color: var(--text-faint); }
     #folder-list .fl-items { flex: 1; overflow-y: auto; min-height: 0; }
     #folder-list .fl-items::-webkit-scrollbar { width: 10px; }
-    #folder-list .fl-items::-webkit-scrollbar-track { background: #0f3460; border-radius: 4px; }
-    #folder-list .fl-items::-webkit-scrollbar-thumb { background: #533483; border-radius: 4px; }
-    #folder-list .fl-items::-webkit-scrollbar-thumb:hover { background: #6c44a0; }
-    #folder-list .fl-item { display: flex; align-items: center; border-bottom: 1px solid #0f3460; }
+    #folder-list .fl-items::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 4px; }
+    #folder-list .fl-items::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+    #folder-list .fl-items::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+    #folder-list .fl-item { display: flex; align-items: center; border-bottom: 1px solid var(--bg-input); }
     #folder-list .fl-name { flex: 1; padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #folder-list .fl-name:hover { background: #533483; }
-    #folder-list .fl-name.active { background: #533483; font-weight: 600; }
-    #folder-list .fl-drill { padding: 0.4rem 0.6rem; cursor: pointer; color: #aaa; font-size: 0.75rem; }
-    #folder-list .fl-drill:hover { background: #533483; color: #fff; }
+    #folder-list .fl-name:hover { background: var(--accent); }
+    #folder-list .fl-name.active { background: var(--accent); font-weight: 600; }
+    #folder-list .fl-drill { padding: 0.4rem 0.6rem; cursor: pointer; color: var(--text-muted); font-size: 0.75rem; }
+    #folder-list .fl-drill:hover { background: var(--accent); color: #fff; }
+    /* Documents overlay */
+    #docs-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg); z-index: 250; overflow-y: auto; }
+    #docs-overlay.active { display: flex; }
+    #docs-panel { background: var(--bg-panel); border-radius: 8px; width: 340px; min-width: 280px; padding: 1rem; overflow-y: auto; border-right: 1px solid var(--bg-input); }
+    #docs-panel .doc-search { width: 100%; padding: 0.4rem 0.6rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+    #docs-panel .doc-list-item { padding: 0.5rem 0.6rem; cursor: pointer; border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.2rem; }
+    #docs-panel .doc-list-item:hover { background: var(--bg-input); }
+    #docs-panel .doc-list-item.active { background: var(--accent); }
+    #docs-panel .doc-list-item .doc-title { font-weight: 600; }
+    #docs-panel .doc-list-item .doc-date { font-size: 0.7rem; color: var(--text-dim); }
+    #doc-detail { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
+    #doc-detail .doc-title-input { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 1.1rem; margin-bottom: 0.75rem; }
+    #doc-detail .doc-body-input { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; resize: vertical; min-height: 200px; font-family: inherit; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    #doc-detail .doc-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    #doc-detail .doc-actions button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    #doc-detail .doc-save { background: var(--accent); color: #fff; }
+    #doc-detail .doc-save:hover { background: var(--accent-hover); }
+    #doc-detail .doc-delete { background: var(--danger-bg); color: var(--danger-bright); }
+    #doc-detail .doc-delete:hover { background: var(--danger-bg-hover); }
+    .doc-section-title { font-size: 0.85rem; color: var(--text-muted); margin: 0.75rem 0 0.4rem; }
+    .doc-file-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.2rem; }
+    .doc-file-row a { color: var(--link-color); text-decoration: none; }
+    .doc-file-row a:hover { text-decoration: underline; }
+    .doc-file-row button { background: none; border: none; color: var(--danger-bright); cursor: pointer; font-size: 1rem; font-weight: 700; }
+    .doc-file-row button:hover { color: var(--danger-hover); }
+    .doc-upload-row { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.3rem; }
+    .doc-upload-row input[type=file] { font-size: 0.8rem; color: var(--text-muted); }
+    .doc-upload-row button { padding: 0.3rem 0.7rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .doc-link-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.2rem; }
+    .doc-link-row button { background: none; border: none; color: var(--danger-bright); cursor: pointer; font-size: 1rem; font-weight: 700; }
+    .doc-link-row button:hover { color: var(--danger-hover); }
+    #docs-close { position: absolute; top: 1rem; right: 1.5rem; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; z-index: 251; }
+    #docs-close:hover { color: var(--text-primary); }
+    #header-docs-btn { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+    #header-docs-btn:hover { background: var(--accent); }
+
+    /* Settings button & modal */
+    #header-history-btn { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+    #header-history-btn:hover { background: var(--accent); }
+    #btn-bookmark-photo { padding: 0.2rem 0.6rem; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-accent); border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-left: 0.5rem; }
+    #btn-bookmark-photo:hover { background: var(--accent); color: var(--text-primary); }
+
+    /* History/Bookmarks overlay */
+    #hb-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg); z-index: 250; }
+    #hb-overlay.active { display: flex; justify-content: center; align-items: flex-start; padding: 4rem 1rem; }
+    #hb-dialog { background: var(--bg-panel); border-radius: 8px; width: 500px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+    #hb-dialog .hb-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem 0.75rem; }
+    #hb-dialog .hb-header h3 { margin: 0; font-size: 1rem; }
+    #hb-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    #hb-close:hover { color: var(--text-primary); }
+    .hb-tabs { display: flex; gap: 0; padding: 0 1.2rem; border-bottom: 1px solid var(--bg-input); }
+    .hb-tab { padding: 0.5rem 1rem; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; }
+    .hb-tab:hover { color: var(--text-primary); }
+    .hb-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); font-weight: 600; }
+    .hb-content { flex: 1; overflow-y: auto; padding: 0.75rem 1.2rem 1rem; }
+    .hb-entry { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 4px; margin-bottom: 0.3rem; background: var(--bg-input); font-size: 0.85rem; }
+    .hb-entry:hover { outline: 1px solid var(--border-accent); }
+    .hb-entry .hb-icon { flex-shrink: 0; font-size: 1rem; }
+    .hb-entry .hb-info { flex: 1; min-width: 0; }
+    .hb-entry .hb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hb-entry .hb-sub { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hb-entry .hb-time { font-size: 0.7rem; color: var(--text-dim); flex-shrink: 0; }
+    .hb-entry .hb-go { padding: 0.2rem 0.5rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; flex-shrink: 0; }
+    .hb-entry .hb-go:hover { background: var(--accent-hover); }
+    .hb-entry .hb-del { padding: 0.2rem 0.4rem; background: none; border: none; color: var(--danger-bright); cursor: pointer; font-size: 1rem; font-weight: 700; flex-shrink: 0; }
+    .hb-entry .hb-del:hover { color: var(--danger-hover); }
+    .hb-empty { color: var(--text-dim); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
+
+    #header-settings-btn { padding: 0.4rem 0.8rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; cursor: pointer; line-height: 1; }
+    #header-settings-btn:hover { background: var(--accent); }
+    #settings-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg-light); z-index: 300; }
+    #settings-overlay.active { display: flex; justify-content: center; align-items: center; }
+    #settings-dialog { background: var(--bg-panel); border-radius: 8px; padding: 1.5rem; min-width: 380px; max-width: 450px; }
+    #settings-dialog h3 { margin-bottom: 1rem; }
+    #settings-dialog label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+    #settings-dialog select, #settings-dialog input[type=text] { width: 100%; padding: 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.9rem; margin-bottom: 1rem; }
+    #settings-dialog .btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    #settings-dialog .btn-row button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
+    #settings-dialog .btn-save { background: var(--accent); color: #fff; }
+    #settings-dialog .btn-save:hover { background: var(--accent-hover); }
+    #settings-dialog .btn-cancel { background: var(--cancel-bg); color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -288,9 +435,12 @@
       <option value="unrated">Unrated</option>
     </select>
     <select id="filter-tag"><option value="">All tags</option></select>
-    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;color:#aaa;cursor:pointer;">
+    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;color:var(--text-muted);cursor:pointer;">
       <input type="checkbox" id="select-all-cb"> Select all
     </label>
+    <button id="header-history-btn">History</button>
+    <button id="header-docs-btn">Documents</button>
+    <button id="header-settings-btn" title="Settings">&#9881;</button>
     <span class="photo-count" id="photo-count"></span>
   </header>
 
@@ -324,8 +474,8 @@
           </div>
         </div>
       </div>
-      <h3 id="detail-filename"></h3>
-      <div id="detail-filesize" style="font-size:0.85rem;color:#aaa;margin-bottom:1rem;"></div>
+      <h3 id="detail-filename" style="display:inline;"></h3><button id="btn-bookmark-photo" title="Bookmark this photo">Bookmark</button>
+      <div id="detail-filesize" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;"></div>
 
       <div class="caption-section">
         <textarea id="caption-input" placeholder="Add a caption..."></textarea>
@@ -352,7 +502,7 @@
           <button id="txt-last" title="Last">&gt;|</button>
           <span class="texts-spacer"></span>
           <button id="txt-new">+ New</button>
-          <button id="txt-delete" class="danger" style="background:#c0392b;border:none;color:#fff;">Delete</button>
+          <button id="txt-delete" class="danger" style="background:var(--danger);border:none;color:#fff;">Delete</button>
         </div>
         <textarea id="txt-body" placeholder="Text entry..."></textarea>
         <div class="texts-actions">
@@ -370,7 +520,6 @@
       </div>
 
       <div class="fileops-section">
-        <button id="btn-rename">Rename</button>
         <button id="btn-convert-png">Convert to PNG</button>
         <button id="btn-resize-print">Resize (Print)</button>
         <button id="btn-resize-screen">Resize (Screen)</button>
@@ -385,13 +534,14 @@
     </div>
     <div id="people-sidebar">
       <h4 style="display:flex;align-items:center;justify-content:space-between;">People in Photo <button id="tag-face-btn" title="Toggle face tagging mode">Faces</button></h4>
+
       <div class="people-list" id="people-list"></div>
       <div class="sidebar-combo" id="people-combo">
         <input placeholder="Type name to add..." id="people-input">
         <div class="combo-matches" id="people-matches"></div>
       </div>
 
-      <hr style="border-color:#533483;margin:1rem 0;">
+      <hr style="border-color:var(--border-accent);margin:1rem 0;">
       <h4>Places</h4>
       <div class="people-list" id="places-list"></div>
       <div class="sidebar-combo" id="places-combo">
@@ -399,12 +549,20 @@
         <div class="combo-matches" id="places-matches"></div>
       </div>
 
-      <hr style="border-color:#533483;margin:1rem 0;">
+      <hr style="border-color:var(--border-accent);margin:1rem 0;">
       <h4>Things</h4>
       <div class="people-list" id="things-list"></div>
       <div class="sidebar-combo" id="things-combo">
         <input placeholder="Type thing to add..." id="things-input">
         <div class="combo-matches" id="things-matches"></div>
+      </div>
+
+      <hr style="border-color:var(--border-accent);margin:1rem 0;">
+      <h4>Documents</h4>
+      <div class="people-list" id="photo-docs-list"></div>
+      <div class="sidebar-combo" id="docs-combo">
+        <input placeholder="Type document to add..." id="docs-input">
+        <div class="combo-matches" id="docs-matches"></div>
       </div>
     </div>
   </div>
@@ -412,34 +570,95 @@
   <!-- Selection toolbar -->
   <div id="selection-toolbar">
     <span class="sel-count" id="sel-count">0 selected</span>
-    <button id="btn-move-selected">Move to folder</button>
     <button id="btn-add-to-group">Add to group</button>
     <button id="btn-deselect-all" class="danger">Deselect all</button>
   </div>
 
-  <!-- Folder picker -->
-  <div id="folder-picker-overlay">
-    <div id="folder-picker-dialog">
-      <h3>Move to folder</h3>
-      <input id="folder-path-input" placeholder="Enter folder path (e.g. D:\Photos\Family)">
-      <div class="folder-list" id="move-folder-list"></div>
-      <div class="btn-row">
-        <button class="btn-cancel" id="folder-picker-cancel">Cancel</button>
-        <button class="btn-move" id="folder-picker-confirm">Move</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Group picker -->
   <div id="group-picker-overlay">
     <div id="group-picker-dialog">
       <h3>Add to group</h3>
       <input id="new-group-input" placeholder="Create new group...">
-      <button id="btn-create-group-inline" style="margin-bottom:0.75rem;padding:0.35rem 0.8rem;background:#533483;color:#fff;border:none;border-radius:4px;cursor:pointer;">Create</button>
+      <button id="btn-create-group-inline" style="margin-bottom:0.75rem;padding:0.35rem 0.8rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;">Create</button>
       <div class="group-list" id="group-list"></div>
       <div class="btn-row">
         <button class="btn-cancel" id="group-picker-cancel">Cancel</button>
         <button class="btn-add" id="group-picker-confirm">Add to group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents overlay -->
+  <div id="docs-overlay">
+    <button id="docs-close">&times;</button>
+    <div id="docs-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <h4 style="margin:0;font-size:0.95rem;color:var(--text-muted);">Documents</h4>
+        <button id="docs-new-btn" style="padding:0.25rem 0.6rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">+ New</button>
+      </div>
+      <input class="doc-search" id="doc-search" placeholder="Search documents...">
+      <div id="doc-list"></div>
+    </div>
+    <div id="doc-detail">
+      <div id="doc-detail-empty" style="color:var(--text-dimmer);font-size:0.9rem;margin-top:2rem;">Select or create a document.</div>
+      <div id="doc-detail-content" style="display:none;">
+        <input class="doc-title-input" id="doc-title-input" placeholder="Title">
+        <textarea class="doc-body-input" id="doc-body-input" placeholder="Write your story or notes here..."></textarea>
+        <div class="doc-actions">
+          <button class="doc-save" id="doc-save-btn">Save</button>
+          <button class="doc-delete" id="doc-delete-btn">Delete</button>
+        </div>
+        <div class="doc-section-title">Files</div>
+        <div id="doc-files-list"></div>
+        <div class="doc-upload-row">
+          <input type="file" id="doc-file-input">
+          <button id="doc-upload-btn">Upload</button>
+        </div>
+        <div class="doc-section-title">People</div>
+        <div id="doc-people-list"></div>
+        <div class="sidebar-combo"><input placeholder="Add person..." id="doc-people-input"><div class="combo-matches" id="doc-people-matches"></div></div>
+        <div class="doc-section-title">Places</div>
+        <div id="doc-places-list"></div>
+        <div class="sidebar-combo"><input placeholder="Add place..." id="doc-places-input"><div class="combo-matches" id="doc-places-matches"></div></div>
+        <div class="doc-section-title">Things</div>
+        <div id="doc-things-list"></div>
+        <div class="sidebar-combo"><input placeholder="Add thing..." id="doc-things-input"><div class="combo-matches" id="doc-things-matches"></div></div>
+        <div class="doc-section-title">Photos</div>
+        <div id="doc-photos-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History/Bookmarks overlay -->
+  <div id="hb-overlay">
+    <div id="hb-dialog">
+      <div class="hb-header">
+        <h3>History & Bookmarks</h3>
+        <button id="hb-close">&times;</button>
+      </div>
+      <div class="hb-tabs">
+        <button class="hb-tab active" data-tab="bookmarks">Bookmarks</button>
+        <button class="hb-tab" data-tab="history">History</button>
+      </div>
+      <div class="hb-content" id="hb-content"></div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settings-overlay">
+    <div id="settings-dialog">
+      <h3>Settings</h3>
+      <label for="settings-theme">Theme</label>
+      <select id="settings-theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+      <label for="settings-base-path">Photo base path</label>
+      <input type="text" id="settings-base-path" placeholder="e.g. D:/">
+      <div class="btn-row">
+        <button class="btn-cancel" id="settings-cancel">Cancel</button>
+        <button class="btn-save" id="settings-save">Save</button>
       </div>
     </div>
   </div>
@@ -555,13 +774,13 @@
 
     async function renderFolderTree() {
       renderFlBreadcrumb();
-      flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:#aaa;font-size:0.85rem;">Loading...</div>';
+      flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--text-muted);font-size:0.85rem;">Loading...</div>';
       try {
         const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(flBrowsePath)}`);
         const dirs = await res.json();
         flItems.innerHTML = '';
         if (dirs.length === 0) {
-          flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:#aaa;font-size:0.85rem;">(no subdirectories)</div>';
+          flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--text-muted);font-size:0.85rem;">(no subdirectories)</div>';
           return;
         }
         dirs.forEach(d => {
@@ -590,7 +809,7 @@
           flItems.appendChild(row);
         });
       } catch (err) {
-        flItems.innerHTML = `<div style="padding:0.5rem 0.75rem;color:#c0392b;font-size:0.85rem;">Error: ${err.message}</div>`;
+        flItems.innerHTML = `<div style="padding:0.5rem 0.75rem;font-size:0.85rem;" class="status-error">Error: ${err.message}</div>`;
       }
     }
 
@@ -601,6 +820,7 @@
       activeSource = 'disk';
       groupSelect.value = '';
       loadPhotos();
+      fetch('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'disk', folder: diskPath, label }) });
     }
 
     // Load groups
@@ -786,12 +1006,13 @@
         await loadPhotoTexts();
         // Load sidebar
         await loadAllSidebar();
-        loadPhotoPeople(); loadPhotoPlaces(); loadPhotoThings();
+        loadPhotoPeople(); loadPhotoPlaces(); loadPhotoThings(); loadPhotoDocs();
       } else {
         captionInput.value = photo.caption || '';
-        detailTags.innerHTML = '<span style="color:#aaa;font-size:0.8rem;">Not in database (no hash match yet)</span>';
+        detailTags.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">Not in database (no hash match yet)</span>';
         photoTexts = []; txtIndex = 0; showCurrentText();
         peopleList.innerHTML = ''; placesList.innerHTML = ''; thingsList.innerHTML = '';
+        document.getElementById('photo-docs-list').innerHTML = '';
       }
 
       // Set active rating button
@@ -1197,7 +1418,7 @@
     });
 
     async function loadAllSidebar() {
-      await Promise.all([loadAllPeople(), loadAllPlaces(), loadAllThings()]);
+      await Promise.all([loadAllPeople(), loadAllPlaces(), loadAllThings(), loadAllDocuments()]);
     }
 
     // Save caption
@@ -1389,6 +1610,8 @@
         activeSource = 'group';
         selectedFolder = '';
         folderBtn.textContent = '-- Folder --';
+        const label = groupSelect.selectedOptions[0]?.textContent || '';
+        fetch('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'group', groupId: parseInt(groupSelect.value), label }) });
       } else {
         activeSource = null;
       }
@@ -1928,13 +2151,13 @@
     function showIdentifyResults(data) {
       fpIdMatches.innerHTML = '';
       if (!data.descriptor_found) {
-        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No face detected in selection</div>';
+        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:var(--text-dim);padding:0.3rem;">No face detected in selection</div>';
       } else if (data.matches.length === 0) {
-        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No reference faces to compare</div>';
+        fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:var(--text-dim);padding:0.3rem;">No reference faces to compare</div>';
       } else {
         const filtered = data.matches.filter(m => m.distance < 0.8);
         if (filtered.length === 0) {
-          fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:#888;padding:0.3rem;">No close matches found</div>';
+          fpIdMatches.innerHTML = '<div style="font-size:0.8rem;color:var(--text-dim);padding:0.3rem;">No close matches found</div>';
         } else {
           filtered.forEach(m => {
             const div = document.createElement('div');
@@ -2055,30 +2278,6 @@
     // --- File ops (detail modal) ---
     const fileopStatus = document.getElementById('fileops-status');
 
-    document.getElementById('btn-rename').addEventListener('click', async () => {
-      if (!currentPhoto || !currentPhoto.id) return;
-      const stem = currentPhoto.filename.replace(/\.[^.]+$/, '');
-      const newName = prompt('New filename (without extension):', stem);
-      if (!newName || newName === stem) return;
-      fileopStatus.textContent = 'Renaming...';
-      const res = await fetch(`/api/photo/${currentPhoto.id}/rename`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newName })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        currentPhoto.filename = data.filename;
-        currentPhoto.original_path = data.original_path;
-        detailFilename.textContent = data.filename;
-        fileopStatus.textContent = 'Renamed successfully';
-      } else {
-        fileopStatus.textContent = 'Error: ' + (data.error || 'rename failed');
-        fileopStatus.style.color = '#c0392b';
-      }
-      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.style.color = '#27ae60'; }, 3000);
-    });
-
     document.getElementById('btn-convert-png').addEventListener('click', async () => {
       if (!currentPhoto || !currentPhoto.id) return;
       fileopStatus.textContent = 'Converting to PNG...';
@@ -2088,9 +2287,9 @@
         fileopStatus.textContent = `PNG created (${data.width}x${data.height})`;
       } else {
         fileopStatus.textContent = 'Error: ' + (data.error || 'convert failed');
-        fileopStatus.style.color = '#c0392b';
+        fileopStatus.className = 'status-msg status-error';
       }
-      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.style.color = '#27ae60'; }, 3000);
+      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.className = 'status-msg status-ok'; }, 3000);
     });
 
     async function doResize(mode) {
@@ -2109,63 +2308,15 @@
         fileopStatus.textContent = parts.join(' | ');
       } else {
         fileopStatus.textContent = 'Error: ' + (data.error || 'resize failed');
-        fileopStatus.style.color = '#c0392b';
+        fileopStatus.className = 'status-msg status-error';
       }
-      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.style.color = '#27ae60'; }, 5000);
+      setTimeout(() => { fileopStatus.textContent = ''; fileopStatus.className = 'status-msg status-ok'; }, 5000);
     }
 
     document.getElementById('btn-resize-print').addEventListener('click', () => doResize('print'));
     document.getElementById('btn-resize-screen').addEventListener('click', () => doResize('screen'));
     document.getElementById('btn-resize-both').addEventListener('click', () => doResize('both'));
 
-    // --- Move to folder ---
-    const folderPickerOverlay = document.getElementById('folder-picker-overlay');
-    const folderPathInput = document.getElementById('folder-path-input');
-    const moveFolderListEl = document.getElementById('move-folder-list');
-
-    document.getElementById('btn-move-selected').addEventListener('click', async () => {
-      if (selectedIds.size === 0) return;
-      // Populate folder list from disk
-      moveFolderListEl.innerHTML = '';
-      if (selectedFolder) {
-        try {
-          const parentPath = selectedFolder.replace(/\/[^/]+$/, '') || selectedFolder;
-          const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(parentPath)}`);
-          const dirs = await res.json();
-          dirs.forEach(d => {
-            const div = document.createElement('div');
-            div.className = 'folder-option';
-            div.textContent = d.name;
-            div.addEventListener('click', () => { folderPathInput.value = d.path; });
-            moveFolderListEl.appendChild(div);
-          });
-        } catch (_) {}
-      }
-      folderPathInput.value = '';
-      folderPickerOverlay.classList.add('active');
-    });
-
-    document.getElementById('folder-picker-cancel').addEventListener('click', () => {
-      folderPickerOverlay.classList.remove('active');
-    });
-
-    document.getElementById('folder-picker-confirm').addEventListener('click', async () => {
-      const target = folderPathInput.value.trim();
-      if (!target) return;
-      const ids = Array.from(selectedIds);
-      const res = await fetch('/api/photos/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileIds: ids, targetFolder: target })
-      });
-      const data = await res.json();
-      folderPickerOverlay.classList.remove('active');
-      selectedIds.clear();
-      updateSelectionUI();
-      selectAllCb.checked = false;
-      loadPhotos();
-      // Folder tree will refresh on next open
-    });
 
     // --- Add to group ---
     const groupPickerOverlay = document.getElementById('group-picker-overlay');
@@ -2332,9 +2483,493 @@
     detailImg.addEventListener('contextmenu', (e) => { if (currentPhoto) showCtxMenu(e, currentPhoto); });
     lbImg.addEventListener('contextmenu', (e) => { if (lbList[lbIndex]) showCtxMenu(e, lbList[lbIndex]); });
 
-    // Init
-    loadGroups();
-    loadAllTags();
+    // --- Documents: sidebar section ---
+    let allDocuments = [];
+    async function loadAllDocuments() {
+      allDocuments = await (await fetch('/api/documents')).json();
+    }
+
+    const photoDocsList = document.getElementById('photo-docs-list');
+    async function loadPhotoDocs() {
+      photoDocsList.innerHTML = '';
+      if (!currentPhoto || !currentPhoto.id) return;
+      const docs = await (await fetch(`/api/photo/${currentPhoto.id}/documents`)).json();
+      docs.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'person-row';
+        row.innerHTML = `<span>${d.title}</span><button title="Remove">&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/photo-documents/${d.id}`, { method: 'DELETE' });
+          loadPhotoDocs();
+        });
+        photoDocsList.appendChild(row);
+      });
+    }
+
+    // Documents sidebar combo - uses setupSidebarCombo with title mapped to name
+    setupSidebarCombo({
+      inputId: 'docs-input', matchesId: 'docs-matches', listId: 'photo-docs-list',
+      allItemsFn: () => allDocuments.map(d => ({ id: d.id, name: d.title })),
+      loadPhotoItemsFn: loadPhotoDocs,
+      fetchAllUrl: '/api/documents', createUrl: '/api/documents',
+      photoLinkUrl: id => `/api/photo/${id}/documents`, idKey: 'document_id'
+    });
+
+    // --- Documents: standalone overlay ---
+    const docsOverlay = document.getElementById('docs-overlay');
+    const docList = document.getElementById('doc-list');
+    const docSearch = document.getElementById('doc-search');
+    const docDetailEmpty = document.getElementById('doc-detail-empty');
+    const docDetailContent = document.getElementById('doc-detail-content');
+    const docTitleInput = document.getElementById('doc-title-input');
+    const docBodyInput = document.getElementById('doc-body-input');
+    const docFilesList = document.getElementById('doc-files-list');
+    const docPeopleList = document.getElementById('doc-people-list');
+    const docPlacesList = document.getElementById('doc-places-list');
+    const docThingsList = document.getElementById('doc-things-list');
+    const docPhotosList = document.getElementById('doc-photos-list');
+    let currentDocument = null;
+
+    document.getElementById('header-docs-btn').addEventListener('click', () => {
+      docsOverlay.classList.add('active');
+      refreshDocList();
+    });
+    document.getElementById('docs-close').addEventListener('click', () => {
+      docsOverlay.classList.remove('active');
+    });
+
+    async function refreshDocList() {
+      await loadAllDocuments();
+      renderDocList();
+    }
+
+    function renderDocList() {
+      const q = docSearch.value.trim().toLowerCase();
+      docList.innerHTML = '';
+      const filtered = q ? allDocuments.filter(d => d.title.toLowerCase().includes(q)) : allDocuments;
+      filtered.forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'doc-list-item' + (currentDocument && currentDocument.id === d.id ? ' active' : '');
+        div.innerHTML = `<div class="doc-title">${d.title}</div><div class="doc-date">${new Date(d.updated_at).toLocaleDateString()}</div>`;
+        div.addEventListener('click', () => openDocument(d.id));
+        docList.appendChild(div);
+      });
+    }
+    docSearch.addEventListener('input', renderDocList);
+
+    document.getElementById('docs-new-btn').addEventListener('click', async () => {
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Untitled Document' })
+      });
+      const doc = await res.json();
+      await refreshDocList();
+      openDocument(doc.id);
+    });
+
+    async function openDocument(id) {
+      const res = await fetch(`/api/documents/${id}`);
+      currentDocument = await res.json();
+      docDetailEmpty.style.display = 'none';
+      docDetailContent.style.display = 'block';
+      docTitleInput.value = currentDocument.title;
+      docBodyInput.value = currentDocument.body || '';
+      renderDocList();
+      loadDocFiles();
+      loadDocPeople();
+      loadDocPlaces();
+      loadDocThings();
+      loadDocPhotos();
+    }
+
+    document.getElementById('doc-save-btn').addEventListener('click', async () => {
+      if (!currentDocument) return;
+      await fetch(`/api/documents/${currentDocument.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: docTitleInput.value, body: docBodyInput.value })
+      });
+      await refreshDocList();
+      await loadAllDocuments(); // refresh sidebar data too
+    });
+
+    document.getElementById('doc-delete-btn').addEventListener('click', async () => {
+      if (!currentDocument || !confirm('Delete this document?')) return;
+      await fetch(`/api/documents/${currentDocument.id}`, { method: 'DELETE' });
+      currentDocument = null;
+      docDetailContent.style.display = 'none';
+      docDetailEmpty.style.display = 'block';
+      await refreshDocList();
+    });
+
+    // --- Doc files ---
+    async function loadDocFiles() {
+      docFilesList.innerHTML = '';
+      if (!currentDocument) return;
+      const files = await (await fetch(`/api/documents/${currentDocument.id}/files`)).json();
+      files.forEach(f => {
+        const row = document.createElement('div');
+        row.className = 'doc-file-row';
+        row.innerHTML = `<a href="/api/document-file/${f.id}" target="_blank">${f.original_name}</a><button title="Remove">&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/document-files/${f.id}`, { method: 'DELETE' });
+          loadDocFiles();
+        });
+        docFilesList.appendChild(row);
+      });
+    }
+
+    document.getElementById('doc-upload-btn').addEventListener('click', async () => {
+      if (!currentDocument) return;
+      const fileInput = document.getElementById('doc-file-input');
+      if (!fileInput.files.length) return;
+      const form = new FormData();
+      form.append('file', fileInput.files[0]);
+      await fetch(`/api/documents/${currentDocument.id}/files`, { method: 'POST', body: form });
+      fileInput.value = '';
+      loadDocFiles();
+    });
+
+    // --- Doc entity linking (combo helper for document overlay) ---
+    function setupDocCombo({ inputId, matchesId, listEl, allItemsFn, loadFn, linkUrl, idKey, createUrl }) {
+      const input = document.getElementById(inputId);
+      const matchesEl = document.getElementById(matchesId);
+      let busy = false;
+
+      function render() {
+        const q = input.value.trim().toLowerCase();
+        matchesEl.innerHTML = '';
+        if (!q) { matchesEl.classList.remove('open'); return; }
+        const hits = allItemsFn().filter(item => item.name.toLowerCase().includes(q));
+        hits.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'combo-match';
+          div.textContent = item.name;
+          div.addEventListener('mousedown', async (e) => {
+            e.preventDefault();
+            if (busy || !currentDocument) return;
+            busy = true;
+            await fetch(linkUrl(currentDocument.id), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [idKey]: item.id })
+            });
+            input.value = '';
+            matchesEl.classList.remove('open');
+            busy = false;
+            loadFn();
+          });
+          matchesEl.appendChild(div);
+        });
+        const exact = hits.some(item => item.name.toLowerCase() === q);
+        if (!exact && createUrl) {
+          const div = document.createElement('div');
+          div.className = 'combo-create';
+          div.textContent = `+ Create "${input.value.trim()}"`;
+          div.addEventListener('mousedown', async (e) => {
+            e.preventDefault();
+            if (busy || !currentDocument) return;
+            busy = true;
+            const res = await fetch(createUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: input.value.trim() })
+            });
+            const created = await res.json();
+            await fetch(linkUrl(currentDocument.id), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [idKey]: created.id })
+            });
+            input.value = '';
+            matchesEl.classList.remove('open');
+            busy = false;
+            await loadAllSidebar();
+            loadFn();
+          });
+          matchesEl.appendChild(div);
+        }
+        matchesEl.classList.add('open');
+      }
+
+      input.addEventListener('input', render);
+      input.addEventListener('focus', render);
+      input.addEventListener('blur', () => matchesEl.classList.remove('open'));
+    }
+
+    async function loadDocPeople() {
+      docPeopleList.innerHTML = '';
+      if (!currentDocument) return;
+      const items = await (await fetch(`/api/documents/${currentDocument.id}/people`)).json();
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'doc-link-row';
+        row.innerHTML = `<span>${item.name}</span><button>&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/document-people/${item.id}`, { method: 'DELETE' });
+          loadDocPeople();
+        });
+        docPeopleList.appendChild(row);
+      });
+    }
+
+    async function loadDocPlaces() {
+      docPlacesList.innerHTML = '';
+      if (!currentDocument) return;
+      const items = await (await fetch(`/api/documents/${currentDocument.id}/places`)).json();
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'doc-link-row';
+        row.innerHTML = `<span>${item.name}</span><button>&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/document-places/${item.id}`, { method: 'DELETE' });
+          loadDocPlaces();
+        });
+        docPlacesList.appendChild(row);
+      });
+    }
+
+    async function loadDocThings() {
+      docThingsList.innerHTML = '';
+      if (!currentDocument) return;
+      const items = await (await fetch(`/api/documents/${currentDocument.id}/things`)).json();
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'doc-link-row';
+        row.innerHTML = `<span>${item.name}</span><button>&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/document-things/${item.id}`, { method: 'DELETE' });
+          loadDocThings();
+        });
+        docThingsList.appendChild(row);
+      });
+    }
+
+    async function loadDocPhotos() {
+      docPhotosList.innerHTML = '';
+      if (!currentDocument) return;
+      const items = await (await fetch(`/api/documents/${currentDocument.id}/photos`)).json();
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'doc-link-row';
+        row.innerHTML = `<span>${item.filename}</span><button>&times;</button>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          await fetch(`/api/document-photos/${item.id}`, { method: 'DELETE' });
+          loadDocPhotos();
+        });
+        docPhotosList.appendChild(row);
+      });
+    }
+
+    setupDocCombo({
+      inputId: 'doc-people-input', matchesId: 'doc-people-matches',
+      listEl: docPeopleList, allItemsFn: () => allPeople, loadFn: loadDocPeople,
+      linkUrl: id => `/api/documents/${id}/people`, idKey: 'person_id', createUrl: '/api/people'
+    });
+    setupDocCombo({
+      inputId: 'doc-places-input', matchesId: 'doc-places-matches',
+      listEl: docPlacesList, allItemsFn: () => allPlaces, loadFn: loadDocPlaces,
+      linkUrl: id => `/api/documents/${id}/places`, idKey: 'place_id', createUrl: '/api/places'
+    });
+    setupDocCombo({
+      inputId: 'doc-things-input', matchesId: 'doc-things-matches',
+      listEl: docThingsList, allItemsFn: () => allThings, loadFn: loadDocThings,
+      linkUrl: id => `/api/documents/${id}/things`, idKey: 'thing_id', createUrl: '/api/things'
+    });
+
+    // --- Settings ---
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const settingsTheme = document.getElementById('settings-theme');
+    const settingsBasePath = document.getElementById('settings-base-path');
+    let savedTheme = 'dark';
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const s = await res.json();
+        savedTheme = s.theme || 'dark';
+        applyTheme(savedTheme);
+        if (s.photo_base_path) flBrowsePath = s.photo_base_path;
+      } catch (_) {}
+    }
+
+    document.getElementById('header-settings-btn').addEventListener('click', () => {
+      settingsTheme.value = savedTheme;
+      settingsBasePath.value = flBrowsePath;
+      settingsOverlay.classList.add('active');
+    });
+
+    // Instant theme preview when changing dropdown
+    settingsTheme.addEventListener('change', () => {
+      applyTheme(settingsTheme.value);
+    });
+
+    document.getElementById('settings-cancel').addEventListener('click', () => {
+      applyTheme(savedTheme); // revert preview
+      settingsOverlay.classList.remove('active');
+    });
+
+    document.getElementById('settings-save').addEventListener('click', async () => {
+      const theme = settingsTheme.value;
+      const basePath = settingsBasePath.value.trim();
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme, photo_base_path: basePath })
+      });
+      savedTheme = theme;
+      applyTheme(theme);
+      if (basePath) flBrowsePath = basePath;
+      settingsOverlay.classList.remove('active');
+    });
+
+    settingsOverlay.addEventListener('click', (e) => {
+      if (e.target === settingsOverlay) {
+        applyTheme(savedTheme);
+        settingsOverlay.classList.remove('active');
+      }
+    });
+
+    // --- History & Bookmarks ---
+    const hbOverlay = document.getElementById('hb-overlay');
+    const hbContent = document.getElementById('hb-content');
+    const hbClose = document.getElementById('hb-close');
+    const headerHistoryBtn = document.getElementById('header-history-btn');
+    let hbActiveTab = 'bookmarks';
+
+    function relativeTime(ts) {
+      const diff = Date.now() - new Date(ts).getTime();
+      const secs = Math.floor(diff / 1000);
+      if (secs < 60) return 'just now';
+      const mins = Math.floor(secs / 60);
+      if (mins < 60) return mins + ' min ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + ' hr ago';
+      const days = Math.floor(hrs / 24);
+      if (days === 1) return 'yesterday';
+      return days + ' days ago';
+    }
+
+    async function renderHBContent() {
+      if (hbActiveTab === 'bookmarks') {
+        const res = await fetch('/api/bookmarks');
+        const bookmarks = await res.json();
+        if (!bookmarks.length) { hbContent.innerHTML = '<div class="hb-empty">No bookmarks yet. Open a photo and click Bookmark.</div>'; return; }
+        hbContent.innerHTML = bookmarks.map(b => `
+          <div class="hb-entry">
+            <span class="hb-icon">&#9733;</span>
+            <div class="hb-info">
+              <div class="hb-name">${b.name}</div>
+              <div class="hb-sub">${b.source === 'disk' ? (b.folder || '').split('/').pop() : 'Group'}${b.photoFilename ? ' > ' + b.photoFilename : ''}</div>
+            </div>
+            <span class="hb-time">${relativeTime(b.ts)}</span>
+            <button class="hb-go" data-source="${b.source}" data-folder="${b.folder || ''}" data-group-id="${b.groupId || ''}" data-photo-id="${b.photoId || ''}">Go</button>
+            <button class="hb-del" data-id="${b.id}" title="Delete bookmark">&times;</button>
+          </div>
+        `).join('');
+      } else {
+        const res = await fetch('/api/history');
+        const history = await res.json();
+        if (!history.length) { hbContent.innerHTML = '<div class="hb-empty">No history yet. Browse some folders or groups.</div>'; return; }
+        hbContent.innerHTML = history.map(h => `
+          <div class="hb-entry" style="cursor:pointer;" data-source="${h.source}" data-folder="${h.folder || ''}" data-group-id="${h.groupId || ''}">
+            <div class="hb-info">
+              <div class="hb-name">${h.label || h.folder || 'Group ' + h.groupId}</div>
+              <div class="hb-sub">${h.source === 'disk' ? 'Folder' : 'Group'}</div>
+            </div>
+            <span class="hb-time">${relativeTime(h.ts)}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    function hbNavigate(source, folder, groupId, photoId) {
+      hbOverlay.classList.remove('active');
+      if (source === 'disk' && folder) {
+        const label = folder.split('/').pop();
+        selectFolder(folder, label);
+      } else if (source === 'group' && groupId) {
+        groupSelect.value = groupId;
+        groupSelect.dispatchEvent(new Event('change'));
+      }
+      if (photoId) {
+        // Wait for grid to load then open the photo
+        setTimeout(() => {
+          const photo = photos.find(p => p.id === parseInt(photoId));
+          if (photo) openDetail(photo);
+        }, 500);
+      }
+    }
+
+    hbContent.addEventListener('click', (e) => {
+      const goBtn = e.target.closest('.hb-go');
+      if (goBtn) {
+        hbNavigate(goBtn.dataset.source, goBtn.dataset.folder, goBtn.dataset.groupId, goBtn.dataset.photoId);
+        return;
+      }
+      const delBtn = e.target.closest('.hb-del');
+      if (delBtn) {
+        fetch('/api/bookmarks/' + delBtn.dataset.id, { method: 'DELETE' }).then(() => renderHBContent());
+        return;
+      }
+      const entry = e.target.closest('.hb-entry[data-source]');
+      if (entry && hbActiveTab === 'history') {
+        hbNavigate(entry.dataset.source, entry.dataset.folder, entry.dataset.groupId);
+      }
+    });
+
+    document.querySelectorAll('.hb-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.hb-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        hbActiveTab = tab.dataset.tab;
+        renderHBContent();
+      });
+    });
+
+    headerHistoryBtn.addEventListener('click', () => {
+      hbOverlay.classList.add('active');
+      renderHBContent();
+    });
+    hbClose.addEventListener('click', () => hbOverlay.classList.remove('active'));
+    hbOverlay.addEventListener('click', (e) => { if (e.target === hbOverlay) hbOverlay.classList.remove('active'); });
+
+    // Bookmark photo button
+    document.getElementById('btn-bookmark-photo').addEventListener('click', () => {
+      if (!currentPhoto) return;
+      const defaultName = currentPhoto.filename || 'Untitled';
+      const name = prompt('Bookmark name:', defaultName);
+      if (!name) return;
+      const body = { name, source: activeSource || 'disk', photoId: currentPhoto.id, photoFilename: currentPhoto.filename };
+      if (activeSource === 'disk') body.folder = selectedFolder;
+      else if (activeSource === 'group') body.groupId = parseInt(groupSelect.value);
+      fetch('/api/bookmarks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    });
+
+    // Init — load settings first (applies theme), then other data, then restore last location
+    loadSettings().then(async () => {
+      await loadGroups();
+      loadAllTags();
+      // Restore last location from history
+      try {
+        const res = await fetch('/api/history');
+        const history = await res.json();
+        if (history.length > 0) {
+          const last = history[0];
+          if (last.source === 'disk' && last.folder) {
+            selectFolder(last.folder, last.label || last.folder.split('/').pop());
+          } else if (last.source === 'group' && last.groupId) {
+            groupSelect.value = last.groupId;
+            groupSelect.dispatchEvent(new Event('change'));
+          }
+        }
+      } catch (e) { /* no history yet */ }
+    });
   </script>
 </body>
 </html>

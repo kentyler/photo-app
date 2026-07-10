@@ -4,6 +4,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const fs = require('fs');
 const sharp = require('sharp');
+const multer = require('multer');
 const { fileHash } = require('./file-hash');
 const { cropRegion, descriptorFromCrop, findMatches, descriptorToBuffer } = require('./face-identify');
 const { resolvePath } = require('./resolve-path');
@@ -20,6 +21,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'photoapp',
   ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : false,
 });
+
+const DOCS_ROOT = process.env.DOCS_ROOT || 'D:/photo-app-documents';
+const upload = multer({ dest: path.join(DOCS_ROOT, '_tmp') });
 
 // --- API: list photos by folder or group ---
 app.get('/api/photos', async (req, res) => {
@@ -233,38 +237,6 @@ app.get('/api/folder-tree', async (req, res) => {
   res.json(rows);
 });
 
-// --- API: rename photo ---
-app.put('/api/photo/:id/rename', async (req, res) => {
-  const newName = (req.body.newName || '').trim();
-  if (!newName) return res.status(400).json({ error: 'newName required' });
-
-  const { rows } = await pool.query(
-    'SELECT original_path, filename, extension, variant_type FROM catalog.files WHERE id = $1',
-    [req.params.id]
-  );
-  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-
-  const oldDiskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
-  if (!fs.existsSync(oldDiskPath)) return res.status(404).json({ error: 'file missing on disk' });
-
-  const dir = path.dirname(oldDiskPath);
-  const ext = rows[0].extension;
-  const newFilename = newName.includes('.') ? newName : `${newName}.${ext}`;
-  const newDiskPath = path.join(dir, newFilename);
-
-  if (fs.existsSync(newDiskPath) && newDiskPath !== oldDiskPath) {
-    return res.status(409).json({ error: 'a file with that name already exists' });
-  }
-
-  fs.renameSync(oldDiskPath, newDiskPath);
-  const newDbPath = path.join(path.dirname(rows[0].original_path), newFilename).replace(/\\/g, '/');
-  await pool.query(
-    'UPDATE catalog.files SET original_path = $1, filename = $2 WHERE id = $3',
-    [newDbPath, newFilename, req.params.id]
-  );
-  res.json({ ok: true, filename: newFilename, original_path: newDbPath });
-});
-
 // --- API: convert to PNG ---
 app.post('/api/photo/:id/convert-png', async (req, res) => {
   const { rows } = await pool.query(
@@ -469,46 +441,6 @@ app.get('/api/photo/:id/variants', async (req, res) => {
   res.json(rows);
 });
 
-// --- API: move photos to folder ---
-app.post('/api/photos/move', async (req, res) => {
-  const { fileIds, targetFolder } = req.body;
-  if (!Array.isArray(fileIds) || fileIds.length === 0) {
-    return res.status(400).json({ error: 'fileIds array required' });
-  }
-  if (!targetFolder || typeof targetFolder !== 'string') {
-    return res.status(400).json({ error: 'targetFolder required' });
-  }
-
-  // Ensure target folder exists
-  fs.mkdirSync(targetFolder, { recursive: true });
-
-  const moved = [];
-  const errors = [];
-
-  for (const id of fileIds) {
-    const { rows } = await pool.query(
-      'SELECT original_path, filename, variant_type FROM catalog.files WHERE id = $1',
-      [id]
-    );
-    if (rows.length === 0) { errors.push({ id, error: 'not found' }); continue; }
-
-    const oldDiskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
-    if (!fs.existsSync(oldDiskPath)) { errors.push({ id, error: 'file missing on disk' }); continue; }
-
-    const newDiskPath = path.join(targetFolder, rows[0].filename);
-    if (fs.existsSync(newDiskPath)) { errors.push({ id, error: 'file already exists at target' }); continue; }
-
-    fs.renameSync(oldDiskPath, newDiskPath);
-    await pool.query(
-      'UPDATE catalog.files SET original_path = $1, source_folder = $2 WHERE id = $3',
-      [newDiskPath, targetFolder, id]
-    );
-    moved.push({ id, newPath: newDiskPath });
-  }
-
-  res.json({ ok: true, moved, errors });
-});
-
 // --- API: groups CRUD ---
 app.get('/api/groups', async (req, res) => {
   const { rows } = await pool.query(
@@ -581,31 +513,7 @@ app.delete('/api/groups/:id/photos/:fileId', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- API: disk folder browsing ---
 const PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'bmp', 'heic']);
-
-app.get('/api/disk-folders', async (req, res) => {
-  const dirPath = req.query.path;
-  if (!dirPath) return res.status(400).json({ error: 'path param required' });
-  try {
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    const dirs = [];
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      const full = path.join(dirPath, e.name).replace(/\\/g, '/');
-      let hasSubdirs = false;
-      try {
-        const sub = await fs.promises.readdir(full, { withFileTypes: true });
-        hasSubdirs = sub.some(s => s.isDirectory());
-      } catch (_) {}
-      dirs.push({ name: e.name, path: full, hasSubdirs });
-    }
-    dirs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-    res.json(dirs);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
 app.get('/api/disk-photos', async (req, res) => {
   const dirPath = req.query.path;
@@ -937,6 +845,231 @@ app.delete('/api/photo-things/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Documents CRUD ---
+app.get('/api/documents', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, title, created_at, updated_at FROM catalog.documents ORDER BY updated_at DESC'
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents', async (req, res) => {
+  const title = (req.body.title || req.body.name || '').trim();
+  if (!title) return res.status(400).json({ error: 'title required' });
+  const body = req.body.body || '';
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.documents (title, body) VALUES ($1, $2) RETURNING *',
+    [title, body]
+  );
+  res.json(rows[0]);
+});
+
+app.get('/api/documents/:id', async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM catalog.documents WHERE id = $1', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+  const doc = rows[0];
+  const { rows: files } = await pool.query(
+    'SELECT id, filename, original_name, mime_type, file_size, sort_order FROM catalog.document_files WHERE document_id = $1 ORDER BY sort_order',
+    [doc.id]
+  );
+  const counts = {};
+  for (const t of ['photos', 'people', 'places', 'things']) {
+    const { rows: c } = await pool.query(`SELECT COUNT(*)::int AS n FROM catalog.document_${t} WHERE document_id = $1`, [doc.id]);
+    counts[t] = c[0].n;
+  }
+  res.json({ ...doc, files, counts });
+});
+
+app.put('/api/documents/:id', async (req, res) => {
+  const title = (req.body.title || '').trim();
+  const body = req.body.body ?? '';
+  const { rowCount } = await pool.query(
+    'UPDATE catalog.documents SET title = $1, body = $2, updated_at = now() WHERE id = $3',
+    [title, body, req.params.id]
+  );
+  if (rowCount === 0) return res.status(404).json({ error: 'not found' });
+  res.json({ ok: true });
+});
+
+app.delete('/api/documents/:id', async (req, res) => {
+  // Delete files on disk first
+  const { rows: files } = await pool.query(
+    'SELECT file_path FROM catalog.document_files WHERE document_id = $1', [req.params.id]
+  );
+  for (const f of files) {
+    try { fs.unlinkSync(f.file_path); } catch (_) {}
+  }
+  const docDir = path.join(DOCS_ROOT, String(req.params.id));
+  try { fs.rmSync(docDir, { recursive: true, force: true }); } catch (_) {}
+  await pool.query('DELETE FROM catalog.documents WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Document file attachments ---
+app.get('/api/documents/:id/files', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, filename, original_name, mime_type, file_size, sort_order FROM catalog.document_files WHERE document_id = $1 ORDER BY sort_order',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents/:id/files', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file required' });
+  const docId = req.params.id;
+  const docDir = path.join(DOCS_ROOT, String(docId));
+  fs.mkdirSync(docDir, { recursive: true });
+  const dest = path.join(docDir, req.file.originalname);
+  fs.renameSync(req.file.path, dest);
+  const { rows: maxRows } = await pool.query(
+    'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM catalog.document_files WHERE document_id = $1', [docId]
+  );
+  const { rows } = await pool.query(
+    `INSERT INTO catalog.document_files (document_id, filename, original_name, file_path, mime_type, file_size, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [docId, req.file.originalname, req.file.originalname, dest, req.file.mimetype, req.file.size, maxRows[0].next]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/document-files/:fileId', async (req, res) => {
+  const { rows } = await pool.query('SELECT file_path FROM catalog.document_files WHERE id = $1', [req.params.fileId]);
+  if (rows.length > 0) {
+    try { fs.unlinkSync(rows[0].file_path); } catch (_) {}
+  }
+  await pool.query('DELETE FROM catalog.document_files WHERE id = $1', [req.params.fileId]);
+  res.json({ ok: true });
+});
+
+app.get('/api/document-file/:fileId', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT file_path, original_name, mime_type FROM catalog.document_files WHERE id = $1', [req.params.fileId]
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+  const filePath = rows[0].file_path;
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
+  res.setHeader('Content-Type', rows[0].mime_type || 'application/octet-stream');
+  res.setHeader('Content-Disposition', `inline; filename="${rows[0].original_name}"`);
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// --- Document junction endpoints ---
+app.get('/api/documents/:id/photos', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT dp.id, dp.photo_id, f.filename, f.original_path FROM catalog.document_photos dp
+     JOIN catalog.files f ON f.id = dp.photo_id WHERE dp.document_id = $1 ORDER BY f.filename`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents/:id/photos', async (req, res) => {
+  const { photo_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.document_photos (document_id, photo_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [req.params.id, photo_id]
+  );
+  res.json(rows[0] || { ok: true });
+});
+
+app.delete('/api/document-photos/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.document_photos WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.get('/api/documents/:id/people', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT dp.id, dp.person_id, p.name FROM catalog.document_people dp
+     JOIN catalog.people p ON p.id = dp.person_id WHERE dp.document_id = $1 ORDER BY p.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents/:id/people', async (req, res) => {
+  const { person_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.document_people (document_id, person_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [req.params.id, person_id]
+  );
+  res.json(rows[0] || { ok: true });
+});
+
+app.delete('/api/document-people/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.document_people WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.get('/api/documents/:id/places', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT dp.id, dp.place_id, p.name FROM catalog.document_places dp
+     JOIN catalog.places p ON p.id = dp.place_id WHERE dp.document_id = $1 ORDER BY p.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents/:id/places', async (req, res) => {
+  const { place_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.document_places (document_id, place_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [req.params.id, place_id]
+  );
+  res.json(rows[0] || { ok: true });
+});
+
+app.delete('/api/document-places/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.document_places WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.get('/api/documents/:id/things', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT dt.id, dt.thing_id, t.name FROM catalog.document_things dt
+     JOIN catalog.things t ON t.id = dt.thing_id WHERE dt.document_id = $1 ORDER BY t.name`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/documents/:id/things', async (req, res) => {
+  const { thing_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.document_things (document_id, thing_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [req.params.id, thing_id]
+  );
+  res.json(rows[0] || { ok: true });
+});
+
+app.delete('/api/document-things/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.document_things WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Reverse: documents for a photo ---
+app.get('/api/photo/:id/documents', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT dp.id, dp.document_id, d.title FROM catalog.document_photos dp
+     JOIN catalog.documents d ON d.id = dp.document_id WHERE dp.photo_id = $1 ORDER BY d.title`,
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/photo/:id/documents', async (req, res) => {
+  const { document_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.document_photos (document_id, photo_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [document_id, req.params.id]
+  );
+  res.json(rows[0] || { ok: true });
+});
+
+app.delete('/api/photo-documents/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.document_photos WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // --- Face identification ---
 app.post('/api/photo/:id/identify', async (req, res) => {
   const { x, y, w, h } = req.body;
@@ -963,6 +1096,85 @@ app.post('/api/photo/:id/identify', async (req, res) => {
     console.error('identify error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- Settings ---
+app.get('/api/settings', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT key, value FROM catalog.settings');
+    const settings = {};
+    rows.forEach(r => { settings[r.key] = r.value; });
+    res.json(settings);
+  } catch (err) {
+    res.json({ theme: 'dark', photo_base_path: '' });
+  }
+});
+
+app.put('/api/settings', async (req, res) => {
+  const entries = Object.entries(req.body);
+  for (const [key, value] of entries) {
+    await pool.query(
+      `INSERT INTO catalog.settings (key, value, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()`,
+      [key, String(value)]
+    );
+  }
+  res.json({ ok: true });
+});
+
+// --- History & Bookmarks (local JSON files) ---
+const HISTORY_FILE = path.join(__dirname, '..', '.history.json');
+const BOOKMARKS_FILE = path.join(__dirname, '..', '.bookmarks.json');
+
+function readJSON(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
+}
+function writeJSON(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+app.get('/api/history', (req, res) => {
+  res.json(readJSON(HISTORY_FILE, []));
+});
+
+app.post('/api/history', (req, res) => {
+  const { source, folder, groupId, label } = req.body;
+  const history = readJSON(HISTORY_FILE, []);
+  const entry = { source, folder, groupId, label, ts: new Date().toISOString() };
+  // Dedupe: if top entry matches, just update ts
+  if (history.length > 0) {
+    const top = history[0];
+    if (top.source === source && top.folder === folder && top.groupId === groupId) {
+      history[0].ts = entry.ts;
+      writeJSON(HISTORY_FILE, history);
+      return res.json({ ok: true });
+    }
+  }
+  history.unshift(entry);
+  if (history.length > 100) history.length = 100;
+  writeJSON(HISTORY_FILE, history);
+  res.json({ ok: true });
+});
+
+app.get('/api/bookmarks', (req, res) => {
+  res.json(readJSON(BOOKMARKS_FILE, []));
+});
+
+app.post('/api/bookmarks', (req, res) => {
+  const { name, source, folder, groupId, photoId, photoFilename } = req.body;
+  const bookmarks = readJSON(BOOKMARKS_FILE, []);
+  const maxId = bookmarks.reduce((m, b) => Math.max(m, b.id || 0), 0);
+  bookmarks.push({ id: maxId + 1, name, source, folder, groupId, photoId: photoId || null, photoFilename: photoFilename || null, ts: new Date().toISOString() });
+  writeJSON(BOOKMARKS_FILE, bookmarks);
+  res.json({ ok: true });
+});
+
+app.delete('/api/bookmarks/:id', (req, res) => {
+  const bookmarks = readJSON(BOOKMARKS_FILE, []);
+  const filtered = bookmarks.filter(b => b.id !== parseInt(req.params.id));
+  writeJSON(BOOKMARKS_FILE, filtered);
+  res.json({ ok: true });
 });
 
 // --- Global error handler (return JSON, not HTML) ---

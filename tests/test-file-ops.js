@@ -1,5 +1,5 @@
 /**
- * Tests for file operations: variants table, rename, convert-png, resize, move.
+ * Tests for file operations: variants table, convert-png, resize.
  * Runs against live DB + disk. Uses a test image created with sharp.
  */
 const { Pool } = require('pg');
@@ -100,30 +100,6 @@ async function testVariantsTable() {
   assert(fks.length > 0, 'source_file_id has foreign key constraint');
 }
 
-async function testRename() {
-  console.log('\n--- Test: rename ---');
-  const data = await fetchJSON(`${API}/photo/${testFileId}/rename`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ newName: 'renamed_photo' })
-  });
-  assert(data.ok === true, 'rename returns ok');
-  assert(data.filename === 'renamed_photo.jpg', 'new filename correct');
-
-  // Verify disk
-  const newPath = path.join(testDir, 'renamed_photo.jpg');
-  assert(fs.existsSync(newPath), 'new file exists on disk');
-  assert(!fs.existsSync(path.join(testDir, 'test_photo.jpg')), 'old file no longer exists');
-
-  // Verify DB
-  const { rows } = await pool.query('SELECT original_path, filename FROM catalog.files WHERE id = $1', [testFileId]);
-  assert(rows[0].filename === 'renamed_photo.jpg', 'DB filename updated');
-  assert(rows[0].original_path === newPath, 'DB original_path updated');
-
-  // Update local reference for subsequent tests
-  testFilePath = newPath;
-}
-
 async function testConvertPng() {
   console.log('\n--- Test: convert to PNG ---');
   const data = await fetchJSON(`${API}/photo/${testFileId}/convert-png`, { method: 'POST' });
@@ -204,40 +180,12 @@ async function testResize() {
   fs.rmSync(smallDir, { recursive: true, force: true });
 }
 
-async function testMove() {
-  console.log('\n--- Test: move ---');
-  const moveTarget = path.join(testDir, 'moved');
-  const data = await fetchJSON(`${API}/photos/move`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileIds: [testFileId], targetFolder: moveTarget })
-  });
-  assert(data.ok === true, 'move returns ok');
-  assert(data.moved.length === 1, 'one file moved');
-  assert(data.errors.length === 0, 'no move errors');
-
-  // Verify disk
-  const movedPath = path.join(moveTarget, 'renamed_photo.jpg');
-  assert(fs.existsSync(movedPath), 'file exists at new location');
-  assert(!fs.existsSync(testFilePath), 'file gone from old location');
-
-  // Verify DB
-  const { rows } = await pool.query('SELECT original_path, source_folder FROM catalog.files WHERE id = $1', [testFileId]);
-  assert(rows[0].original_path === movedPath, 'DB original_path updated after move');
-  assert(rows[0].source_folder === moveTarget, 'DB source_folder updated after move');
-
-  // Update test reference
-  testFilePath = movedPath;
-}
-
 async function run() {
   try {
     await setup();
     await testVariantsTable();
-    await testRename();
     await testConvertPng();
     await testResize();
-    await testMove();
   } catch (err) {
     console.error('Test error:', err);
     failed++;
