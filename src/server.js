@@ -331,16 +331,6 @@ app.get('/api/file-size', async (req, res) => {
   }
 });
 
-// --- API: list variants for a photo ---
-app.get('/api/photo/:id/variants', async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT id, variant_type, variant_path, width, height, created_at
-     FROM catalog.variants WHERE source_file_id = $1 ORDER BY created_at`,
-    [req.params.id]
-  );
-  res.json(rows);
-});
-
 // --- API: groups CRUD ---
 app.get('/api/groups', async (req, res) => {
   const { rows } = await pool.query(
@@ -414,6 +404,29 @@ app.delete('/api/groups/:id/photos/:fileId', async (req, res) => {
 });
 
 const PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'bmp', 'heic']);
+
+app.get('/api/disk-folders', async (req, res) => {
+  const dirPath = req.query.path;
+  if (!dirPath) return res.status(400).json({ error: 'path param required' });
+  try {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    const dirs = [];
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const full = path.join(dirPath, e.name).replace(/\\/g, '/');
+      let hasSubdirs = false;
+      try {
+        const sub = await fs.promises.readdir(full, { withFileTypes: true });
+        hasSubdirs = sub.some(s => s.isDirectory());
+      } catch (_) {}
+      dirs.push({ name: e.name, path: full, hasSubdirs });
+    }
+    dirs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    res.json(dirs);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 app.get('/api/disk-photos', async (req, res) => {
   const dirPath = req.query.path;

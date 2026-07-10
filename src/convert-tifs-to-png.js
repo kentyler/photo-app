@@ -4,7 +4,7 @@
  * Converts TIF files in a given folder to PNG at optimal 8x10 print size (3000px max).
  * Updates DB records and removes the original TIFs.
  *
- * Usage: node src/convert-tifs-to-png.js [--dry-run]
+ * Usage: node src/convert-tifs-to-png.js <folder-path> [--dry-run]
  */
 
 const fs = require('node:fs');
@@ -13,7 +13,12 @@ const { Pool } = require('pg');
 const sharp = require('sharp');
 const { fileHash } = require('./file-hash');
 
-const TARGET_DIR = 'D:/B_Copies/hires/Frances_Oliveira_and_Family/helmut';
+const args = process.argv.slice(2);
+const TARGET_DIR = args.find(a => !a.startsWith('--'));
+if (!TARGET_DIR) {
+  console.error('Usage: node src/convert-tifs-to-png.js <folder-path> [--dry-run]');
+  process.exit(1);
+}
 const MAX_DIM = 3000; // 300 DPI at 10 inches
 const PNG_COMPRESSION = 6; // 0-9, 6 is default balance of speed/size
 
@@ -32,7 +37,6 @@ async function walkDir(dir) {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
 
   console.log(`Converting TIFs to PNG in: ${TARGET_DIR}`);
