@@ -2,7 +2,7 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 const faceapiBackend = require('./face-detect-faceapi');
 
-const PYTHON = 'C:/Python312/python.exe';
+const PYTHON = process.env.PYTHON_BIN || 'python3';
 const ENCODE_SCRIPT = path.join(__dirname, 'face-encode-dlib.py');
 
 function getDlibDescriptors(imagePath, boxes) {

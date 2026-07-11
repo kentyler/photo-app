@@ -5,7 +5,7 @@ const PYTHON_SCRIPT = path.join(__dirname, 'face-detect-dlib.py');
 
 function detectFaces(imagePath) {
   return new Promise((resolve, reject) => {
-    execFile('C:/Python312/python.exe', [PYTHON_SCRIPT, imagePath], {
+    execFile(process.env.PYTHON_BIN || 'python3', [PYTHON_SCRIPT, imagePath], {
       timeout: 60000,
       maxBuffer: 10 * 1024 * 1024,
     }, (err, stdout, stderr) => {

@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const fs = require('fs');
+const os = require('os');
 const sharp = require('sharp');
 const multer = require('multer');
 const { fileHash } = require('./file-hash');
@@ -23,7 +24,7 @@ const pool = new Pool({
   ssl: process.env.DB_SSL ? { rejectUnauthorized: false } : false,
 });
 
-const DOCS_ROOT = process.env.DOCS_ROOT || 'D:/photo-app-documents';
+const DOCS_ROOT = process.env.DOCS_ROOT || path.join(os.homedir(), 'photo-app', 'documents');
 const upload = multer({ dest: path.join(DOCS_ROOT, '_tmp') });
 
 // --- Helper: resolve account IDs for filtering ---

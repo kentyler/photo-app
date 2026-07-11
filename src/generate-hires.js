@@ -1,10 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { Pool } = require('pg');
 const sharp = require('sharp');
 const { fileHash } = require('./file-hash');
+const { drivePrefix } = require('./source-folder');
 
-const DEFAULT_HIRES_ROOT = 'D:/b_copies/hires';
+const DEFAULT_HIRES_ROOT = process.env.HIRES_ROOT || path.join(os.homedir(), 'photo-app', 'hires');
 const HIRES_MAX_DIM = 3000;  // 300 DPI at 10 inches
 const HIRES_MIN_DIM = 2400;  // 300 DPI at 8 inches — shortest edge must be at least this
 const JPEG_QUALITY = 95;
@@ -16,12 +18,12 @@ function buildOutputPath(originalPath, driveRoot, outputRoot) {
   let root = driveRoot.replace(/\\/g, '/');
   if (!root.endsWith('/')) root += '/';
 
-  const driveLetter = root.charAt(0);
+  const dp = drivePrefix(root);
   const relative = normalized.slice(root.length);
   const firstFolder = relative.split('/')[0];
   const rest = relative.split('/').slice(1).join('/');
 
-  const prefix = `${driveLetter}_${firstFolder}`;
+  const prefix = `${dp}_${firstFolder}`;
   const baseName = rest.replace(/\.[^.]+$/, '') + '.jpg';
   return `${outputRoot}/${prefix}/${baseName}`;
 }
@@ -142,7 +144,7 @@ async function generateHires(pool, driveRoot, folderFilter, opts = {}) {
 
       const stat = await fs.promises.stat(outputPath);
       const outMeta = await sharp(outputPath).metadata();
-      const sourcePrefix = `${root.charAt(0)}_${row.source_folder}`;
+      const sourcePrefix = `${drivePrefix(root)}_${row.source_folder}`;
 
       await pool.query(
         `INSERT INTO catalog.files

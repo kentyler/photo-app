@@ -1,13 +1,15 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { Pool } = require('pg');
 const sharp = require('sharp');
 const { scanFolder } = require('./scan-orchestrator');
 const { fileHash } = require('./file-hash');
+const { drivePrefix } = require('./source-folder');
 
-const DEFAULT_LOWRES_ROOT = process.env.LOWRES_ROOT || 'D:/b_copies/lowres';
-const DEFAULT_VIDEO_ROOT = 'D:/b_copies/videos';
+const DEFAULT_LOWRES_ROOT = process.env.LOWRES_ROOT || path.join(os.homedir(), 'photo-app', 'lowres');
+const DEFAULT_VIDEO_ROOT = process.env.VIDEO_ROOT || path.join(os.homedir(), 'photo-app', 'videos');
 const MAX_DIM = 3840;
 const JPEG_QUALITY = 95;
 
@@ -19,12 +21,12 @@ function buildOutputPath(originalPath, driveRoot, outputRoot) {
   let root = driveRoot.replace(/\\/g, '/');
   if (!root.endsWith('/')) root += '/';
 
-  const driveLetter = root.charAt(0);
+  const dp = drivePrefix(root);
   const relative = normalized.slice(root.length);
   const firstFolder = relative.split('/')[0];
   const rest = relative.split('/').slice(1).join('/');
 
-  const prefix = `${driveLetter}_${firstFolder}`;
+  const prefix = `${dp}_${firstFolder}`;
   const baseName = rest.replace(/\.[^.]+$/, '') + '.jpg';
   return `${outputRoot}/${prefix}/${baseName}`;
 }
@@ -34,12 +36,12 @@ function buildVideoOutputPath(originalPath, driveRoot, videoRoot) {
   let root = driveRoot.replace(/\\/g, '/');
   if (!root.endsWith('/')) root += '/';
 
-  const driveLetter = root.charAt(0);
+  const dp = drivePrefix(root);
   const relative = normalized.slice(root.length);
   const firstFolder = relative.split('/')[0];
   const rest = relative.split('/').slice(1).join('/');
 
-  const prefix = `${driveLetter}_${firstFolder}`;
+  const prefix = `${dp}_${firstFolder}`;
   return `${videoRoot}/${prefix}/${rest}`;
 }
 
@@ -123,7 +125,7 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
           width: result.width,
           height: result.height,
           sizeBytes: stat.size,
-          sourceFolder: `${root.charAt(0)}_${row.source_folder}`,
+          sourceFolder: `${drivePrefix(root)}_${row.source_folder}`,
         });
 
         process.stderr.write(`  [${processed}/${originals.length}] ${path.basename(row.original_path)} -> ${result.width}x${result.height}\r`);
@@ -148,7 +150,7 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
           originalId: row.id,
           outputPath,
           sizeBytes: stat.size,
-          sourceFolder: `${root.charAt(0)}_${row.source_folder}`,
+          sourceFolder: `${drivePrefix(root)}_${row.source_folder}`,
         });
         process.stderr.write(`  [${processed}/${originals.length}] copied video: ${path.basename(row.original_path)}\r`);
       } catch (err) {
@@ -192,7 +194,7 @@ async function generateLowres(pool, driveRoot, folderFilter, opts = {}) {
       if (hashExists.rows.length > 0) continue;
 
       const stat = await fs.promises.stat(outputPath);
-      const sourcePrefix = `${root.charAt(0)}_${row.source_folder}`;
+      const sourcePrefix = `${drivePrefix(root)}_${row.source_folder}`;
 
       // Store path relative to LOWRES_ROOT
       const relPath = outputPath.replace(/\\/g, '/').replace(LOWRES_ROOT.replace(/\\/g, '/') + '/', '');

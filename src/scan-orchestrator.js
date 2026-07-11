@@ -60,7 +60,8 @@ module.exports = { scanFolder };
 if (require.main === module) {
   const { Pool } = require('pg');
   const folder = process.argv[2];
-  const root = process.argv[3] || 'D:/';
+  const os = require('os');
+  const root = process.argv[3] || os.homedir();
   if (!folder) { console.error('Usage: node src/scan-orchestrator.js <folder> [root]'); process.exit(1); }
 
   const pool = new Pool({ host: 'localhost', user: 'postgres', password: '7297', database: 'photoapp' });

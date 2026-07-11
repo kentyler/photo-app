@@ -15,12 +15,13 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { Pool } = require('pg');
 const sharp = require('sharp');
 const { fileHash } = require('./file-hash');
 
-const LOWRES_ROOT = process.env.LOWRES_ROOT || 'D:/b_copies/lowres';
-const HIRES_ROOT = 'D:/B_Copies/hires';
+const LOWRES_ROOT = process.env.LOWRES_ROOT || path.join(os.homedir(), 'photo-app', 'lowres');
+const HIRES_ROOT = process.env.HIRES_ROOT || path.join(os.homedir(), 'photo-app', 'hires');
 const MAX_DIM = 3840;
 const JPEG_QUALITY = 95;
 
