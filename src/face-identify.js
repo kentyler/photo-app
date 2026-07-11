@@ -48,9 +48,9 @@ async function descriptorFromCrop(cropBuffer) {
  */
 async function findMatches(pool, queryDescriptor) {
   const { rows } = await pool.query(
-    `SELECT pp.person_id, p.name, pp.descriptor
+    `SELECT pp.person_id, pa.alias AS name, pp.descriptor
      FROM catalog.photo_people pp
-     JOIN catalog.people p ON p.id = pp.person_id
+     JOIN catalog.person_aliases pa ON pa.person_id = pp.person_id AND pa.is_primary = true
      WHERE pp.descriptor IS NOT NULL`
   );
 

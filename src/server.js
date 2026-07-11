@@ -8,6 +8,7 @@ const multer = require('multer');
 const { fileHash } = require('./file-hash');
 const { cropRegion, descriptorFromCrop, findMatches, descriptorToBuffer } = require('./face-identify');
 const { resolvePath } = require('./resolve-path');
+const { startWatcher } = require('./file-watcher');
 
 const app = express();
 app.use(express.json());
@@ -25,57 +26,87 @@ const pool = new Pool({
 const DOCS_ROOT = process.env.DOCS_ROOT || 'D:/photo-app-documents';
 const upload = multer({ dest: path.join(DOCS_ROOT, '_tmp') });
 
+// --- Helper: resolve account IDs for filtering ---
+async function getAccountFilter(pool, accountParam) {
+  // Returns array of account IDs to include, or null for no filter (show all)
+  if (!accountParam || accountParam === 'all') return null;
+  if (accountParam === 'master') {
+    const { rows } = await pool.query("SELECT id FROM catalog.accounts WHERE name = 'master'");
+    return rows.length > 0 ? [rows[0].id] : [1];
+  }
+  // Specific account name: show master + that account
+  const { rows: masterRows } = await pool.query("SELECT id FROM catalog.accounts WHERE name = 'master'");
+  const { rows: acctRows } = await pool.query('SELECT id FROM catalog.accounts WHERE name = $1', [accountParam]);
+  const ids = masterRows.map(r => r.id);
+  acctRows.forEach(r => { if (!ids.includes(r.id)) ids.push(r.id); });
+  return ids;
+}
+
 // --- API: list photos by folder or group ---
 app.get('/api/photos', async (req, res) => {
   const folder = req.query.folder;
   const groupId = req.query.group;
+  const accountIds = await getAccountFilter(pool, req.query.account);
+  const acctClause = accountIds ? `AND f.account_id = ANY($ACCT$)` : '';
 
   if (groupId) {
-    const { rows } = await pool.query(
-      `SELECT f.id, f.filename, f.original_path, f.extension, f.media_type, f.taken_at,
+    let q = `SELECT f.id, f.filename, f.original_path, f.extension, f.media_type, f.taken_at,
               f.width, f.height, f.caption, f.rating, f.source_folder, f.variant_type
        FROM catalog.files f
        JOIN catalog.group_files gf ON gf.file_id = f.id
-       WHERE gf.group_id = $1 AND f.media_type = 'photo' AND f.filename NOT LIKE 'x\\_%'
-       ORDER BY f.taken_at ASC NULLS LAST, f.filename ASC`,
-      [groupId]
-    );
+       WHERE gf.group_id = $1 AND f.media_type = 'photo' AND f.filename NOT LIKE 'x\\_%'`;
+    const params = [groupId];
+    if (accountIds) {
+      q += ` AND f.account_id = ANY($2)`;
+      params.push(accountIds);
+    }
+    q += ` ORDER BY f.taken_at ASC NULLS LAST, f.filename ASC`;
+    const { rows } = await pool.query(q, params);
     return res.json(rows);
   }
 
   if (!folder) return res.status(400).json({ error: 'folder or group param required' });
 
   if (folder === '__all__') {
-    const { rows } = await pool.query(
-      `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
+    let q = `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
               caption, rating, source_folder, variant_type
-       FROM catalog.files
-       WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
-       ORDER BY taken_at ASC NULLS LAST, filename ASC`
-    );
+       FROM catalog.files f
+       WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'`;
+    const params = [];
+    if (accountIds) {
+      q += ` AND f.account_id = ANY($1)`;
+      params.push(accountIds);
+    }
+    q += ` ORDER BY taken_at ASC NULLS LAST, filename ASC`;
+    const { rows } = await pool.query(q, params);
     return res.json(rows);
   }
 
-  const { rows } = await pool.query(
-    `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
+  let q = `SELECT id, filename, original_path, extension, media_type, taken_at, width, height,
             caption, rating, source_folder, variant_type
-     FROM catalog.files
-     WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo' AND filename NOT LIKE 'x\\_%'
-     ORDER BY taken_at ASC NULLS LAST, filename ASC`,
-    [folder]
-  );
+     FROM catalog.files f
+     WHERE regexp_replace(original_path, '/[^/]+$', '') = $1 AND media_type = 'photo' AND filename NOT LIKE 'x\\_%'`;
+  const params = [folder];
+  if (accountIds) {
+    q += ` AND f.account_id = ANY($2)`;
+    params.push(accountIds);
+  }
+  q += ` ORDER BY taken_at ASC NULLS LAST, filename ASC`;
+  const { rows } = await pool.query(q, params);
   res.json(rows);
 });
 
 // --- API: stream photo by id ---
 app.get('/api/photo/:id', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT original_path, extension, variant_type FROM catalog.files WHERE id = $1',
+    `SELECT f.original_path, f.extension, a.root_path
+     FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+     WHERE f.id = $1`,
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
 
-  const filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
+  const filePath = resolvePath(rows[0].original_path, rows[0].root_path);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'file missing on disk' });
 
   const ext = rows[0].extension.toLowerCase();
@@ -215,11 +246,16 @@ app.delete('/api/text/:textId', async (req, res) => {
 
 // --- API: list folders ---
 app.get('/api/folders', async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT source_folder, COUNT(*) as count
-     FROM catalog.files WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'
-     GROUP BY source_folder ORDER BY source_folder`
-  );
+  const accountIds = await getAccountFilter(pool, req.query.account);
+  let q = `SELECT source_folder, COUNT(*) as count
+     FROM catalog.files f WHERE media_type = 'photo' AND filename NOT LIKE 'x\\_%'`;
+  const params = [];
+  if (accountIds) {
+    q += ` AND f.account_id = ANY($1)`;
+    params.push(accountIds);
+  }
+  q += ` GROUP BY source_folder ORDER BY source_folder`;
+  const { rows } = await pool.query(q, params);
   res.json(rows);
 });
 
@@ -244,9 +280,12 @@ app.post('/api/rotate', async (req, res) => {
 
   let filePath;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path, variant_type FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query(
+      `SELECT f.original_path, a.root_path
+       FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+       WHERE f.id = $1`, [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-    filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
+    filePath = resolvePath(rows[0].original_path, rows[0].root_path);
   } else if (diskPath) {
     filePath = diskPath;
   } else {
@@ -280,10 +319,13 @@ app.post('/api/hide', async (req, res) => {
 
   let filePath, filename, dbRow;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path, filename, variant_type FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query(
+      `SELECT f.original_path, f.filename, a.root_path
+       FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+       WHERE f.id = $1`, [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
     dbRow = rows[0];
-    filePath = resolvePath(dbRow.original_path, dbRow.variant_type);
+    filePath = resolvePath(dbRow.original_path, dbRow.root_path);
     filename = dbRow.filename;
   } else if (diskPath) {
     filePath = diskPath;
@@ -315,9 +357,12 @@ app.get('/api/file-size', async (req, res) => {
   const { id, path: diskPath } = req.query;
   let filePath;
   if (id) {
-    const { rows } = await pool.query('SELECT original_path, variant_type FROM catalog.files WHERE id = $1', [id]);
+    const { rows } = await pool.query(
+      `SELECT f.original_path, a.root_path
+       FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+       WHERE f.id = $1`, [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'not found' });
-    filePath = resolvePath(rows[0].original_path, rows[0].variant_type);
+    filePath = resolvePath(rows[0].original_path, rows[0].root_path);
   } else if (diskPath) {
     filePath = diskPath;
   } else {
@@ -502,30 +547,103 @@ app.get('/api/disk-photo', (req, res) => {
 
 // --- People / Genealogy ---
 app.get('/api/people', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM catalog.people ORDER BY name');
+  const { rows } = await pool.query(
+    `SELECT p.id, pa.alias AS name, p.birth_date, p.death_date, p.gender, p.notes
+     FROM catalog.people p
+     JOIN catalog.person_aliases pa ON pa.person_id = p.id AND pa.is_primary = true
+     ORDER BY pa.alias`
+  );
   res.json(rows);
 });
 
 app.post('/api/people', async (req, res) => {
   const { name, birth_date, death_date, gender, notes } = req.body;
-  const { rows } = await pool.query(
-    'INSERT INTO catalog.people (name, birth_date, death_date, gender, notes) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-    [name, birth_date || null, death_date || null, gender || null, notes || null]
-  );
-  res.json(rows[0]);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'INSERT INTO catalog.people (birth_date, death_date, gender, notes) VALUES ($1,$2,$3,$4) RETURNING *',
+      [birth_date || null, death_date || null, gender || null, notes || null]
+    );
+    const person = rows[0];
+    await client.query(
+      'INSERT INTO catalog.person_aliases (person_id, alias, is_primary) VALUES ($1, $2, true)',
+      [person.id, name]
+    );
+    await client.query('COMMIT');
+    res.json({ ...person, name });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 app.put('/api/people/:id', async (req, res) => {
   const { name, birth_date, death_date, gender, notes } = req.body;
-  const { rows } = await pool.query(
-    'UPDATE catalog.people SET name=$1, birth_date=$2, death_date=$3, gender=$4, notes=$5 WHERE id=$6 RETURNING *',
-    [name, birth_date || null, death_date || null, gender || null, notes || null, req.params.id]
-  );
-  res.json(rows[0]);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'UPDATE catalog.people SET birth_date=$1, death_date=$2, gender=$3, notes=$4 WHERE id=$5',
+      [birth_date || null, death_date || null, gender || null, notes || null, req.params.id]
+    );
+    if (name) {
+      await client.query(
+        `UPDATE catalog.person_aliases SET alias = $1 WHERE person_id = $2 AND is_primary = true`,
+        [name, req.params.id]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 app.delete('/api/people/:id', async (req, res) => {
   await pool.query('DELETE FROM catalog.people WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// --- Person Aliases ---
+app.get('/api/people/:id/aliases', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, alias, is_primary FROM catalog.person_aliases WHERE person_id = $1 ORDER BY is_primary DESC, alias',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+app.post('/api/people/:id/aliases', async (req, res) => {
+  const alias = (req.body.alias || '').trim();
+  if (!alias) return res.status(400).json({ error: 'alias required' });
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.person_aliases (person_id, alias) VALUES ($1, $2) ON CONFLICT (person_id, alias) DO NOTHING RETURNING *',
+    [req.params.id, alias]
+  );
+  if (rows.length === 0) return res.json({ ok: true, already: true });
+  res.json(rows[0]);
+});
+
+app.put('/api/aliases/:id/primary', async (req, res) => {
+  const { rows } = await pool.query('SELECT person_id FROM catalog.person_aliases WHERE id = $1', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+  const personId = rows[0].person_id;
+  await pool.query('UPDATE catalog.person_aliases SET is_primary = false WHERE person_id = $1', [personId]);
+  await pool.query('UPDATE catalog.person_aliases SET is_primary = true WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/aliases/:id', async (req, res) => {
+  const { rows } = await pool.query('SELECT is_primary FROM catalog.person_aliases WHERE id = $1', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'not found' });
+  if (rows[0].is_primary) return res.status(400).json({ error: 'cannot delete primary alias' });
+  await pool.query('DELETE FROM catalog.person_aliases WHERE id = $1', [req.params.id]);
   res.json({ ok: true });
 });
 
@@ -534,11 +652,11 @@ const INVERSE_TYPE = { parent: 'child', child: 'parent', spouse: 'spouse', sibli
 
 app.get('/api/people/:id/relationships', async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT r.*, p.name AS related_name
+    `SELECT r.*, pa.alias AS related_name
      FROM catalog.relationships r
-     JOIN catalog.people p ON p.id = r.related_id
+     JOIN catalog.person_aliases pa ON pa.person_id = r.related_id AND pa.is_primary = true
      WHERE r.person_id = $1
-     ORDER BY r.type, p.name`,
+     ORDER BY r.type, pa.alias`,
     [req.params.id]
   );
   res.json(rows);
@@ -599,9 +717,9 @@ app.delete('/api/relationships/:id', async (req, res) => {
 // --- Photo-People (tagging faces) ---
 app.get('/api/photo/:id/people', async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT pp.*, p.name FROM catalog.photo_people pp
-     JOIN catalog.people p ON p.id = pp.person_id
-     WHERE pp.photo_id = $1 ORDER BY p.name`,
+    `SELECT pp.*, pa.alias AS name FROM catalog.photo_people pp
+     JOIN catalog.person_aliases pa ON pa.person_id = pp.person_id AND pa.is_primary = true
+     WHERE pp.photo_id = $1 ORDER BY pa.alias`,
     [req.params.id]
   );
   res.json(rows);
@@ -618,10 +736,12 @@ app.post('/api/photo/:id/people', async (req, res) => {
   if (x != null && y != null && w != null && h != null) {
     try {
       const { rows: fileRows } = await pool.query(
-        'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1', [req.params.id]
+        `SELECT f.original_path, f.width, f.height, a.root_path
+         FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+         WHERE f.id = $1`, [req.params.id]
       );
       if (fileRows.length > 0) {
-        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].variant_type);
+        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].root_path);
         const cropBuf = await cropRegion(diskPath, fileRows[0].width, fileRows[0].height, { x, y, w, h });
         const descriptor = await descriptorFromCrop(cropBuf);
         if (descriptor) {
@@ -647,10 +767,12 @@ app.put('/api/photo-people/:id', async (req, res) => {
   if (pp && x != null && y != null && w != null && h != null) {
     try {
       const { rows: fileRows } = await pool.query(
-        'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1', [pp.photo_id]
+        `SELECT f.original_path, f.width, f.height, a.root_path
+         FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+         WHERE f.id = $1`, [pp.photo_id]
       );
       if (fileRows.length > 0) {
-        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].variant_type);
+        const diskPath = resolvePath(fileRows[0].original_path, fileRows[0].root_path);
         const cropBuf = await cropRegion(diskPath, fileRows[0].width, fileRows[0].height, { x, y, w, h });
         const descriptor = await descriptorFromCrop(cropBuf);
         if (descriptor) {
@@ -892,8 +1014,9 @@ app.delete('/api/document-photos/:id', async (req, res) => {
 
 app.get('/api/documents/:id/people', async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT dp.id, dp.person_id, p.name FROM catalog.document_people dp
-     JOIN catalog.people p ON p.id = dp.person_id WHERE dp.document_id = $1 ORDER BY p.name`,
+    `SELECT dp.id, dp.person_id, pa.alias AS name FROM catalog.document_people dp
+     JOIN catalog.person_aliases pa ON pa.person_id = dp.person_id AND pa.is_primary = true
+     WHERE dp.document_id = $1 ORDER BY pa.alias`,
     [req.params.id]
   );
   res.json(rows);
@@ -990,12 +1113,14 @@ app.post('/api/photo/:id/identify', async (req, res) => {
     return res.status(400).json({ error: 'x, y, w, h are required' });
   }
   const { rows } = await pool.query(
-    'SELECT original_path, width, height, variant_type FROM catalog.files WHERE id = $1',
+    `SELECT f.original_path, f.width, f.height, a.root_path
+     FROM catalog.files f JOIN catalog.accounts a ON a.id = f.account_id
+     WHERE f.id = $1`,
     [req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'not found' });
   const { width, height } = rows[0];
-  const diskPath = resolvePath(rows[0].original_path, rows[0].variant_type);
+  const diskPath = resolvePath(rows[0].original_path, rows[0].root_path);
 
   try {
     const cropBuf = await cropRegion(diskPath, width, height, { x, y, w, h });
@@ -1008,6 +1133,48 @@ app.post('/api/photo/:id/identify', async (req, res) => {
   } catch (err) {
     console.error('identify error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Accounts ---
+app.get('/api/accounts', async (req, res) => {
+  const { rows } = await pool.query('SELECT id, name, root_path, created_at FROM catalog.accounts ORDER BY id');
+  res.json(rows);
+});
+
+app.post('/api/accounts', async (req, res) => {
+  const name = (req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const rootPath = req.body.root_path || null;
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.accounts (name, root_path) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET root_path = COALESCE($2, catalog.accounts.root_path) RETURNING *',
+    [name, rootPath]
+  );
+  res.json(rows[0]);
+});
+
+app.get('/api/account/current', async (req, res) => {
+  try {
+    const { rows: settingsRows } = await pool.query(
+      "SELECT key, value FROM catalog.settings WHERE key IN ('local_account', 'local_photos_dir')"
+    );
+    const settings = {};
+    settingsRows.forEach(r => { settings[r.key] = r.value; });
+
+    if (!settings.local_account) return res.json({ configured: false });
+
+    const { rows: acctRows } = await pool.query(
+      'SELECT id, name, root_path FROM catalog.accounts WHERE name = $1', [settings.local_account]
+    );
+    const account = acctRows[0] || null;
+    res.json({
+      configured: true,
+      name: settings.local_account,
+      photos_dir: settings.local_photos_dir || '',
+      account
+    });
+  } catch (err) {
+    res.json({ configured: false });
   }
 });
 
@@ -1104,6 +1271,7 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3100;
 app.listen(PORT, () => {
   console.log(`Photo triage UI running at http://localhost:${PORT}`);
+  startWatcher(pool).catch(err => console.error('[watcher] failed to start:', err.message));
 });
 
 module.exports = app;

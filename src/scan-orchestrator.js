@@ -9,7 +9,7 @@ const { extractVideoMeta } = require('./video-metadata');
 const PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'bmp', 'heic']);
 const VIDEO_EXTS = new Set(['mp4', 'mov', 'avi']);
 
-async function scanFolder(pool, folderPath, rootDir) {
+async function scanFolder(pool, folderPath, rootDir, accountId) {
   let inserted = 0, skipped = 0, errors = 0, total = 0;
 
   for await (const entry of walkDirectory(folderPath)) {
@@ -36,6 +36,7 @@ async function scanFolder(pool, folderPath, rootDir) {
         duration_secs: vidMeta.duration_secs,
         camera_make: exif.camera_make,
         camera_model: exif.camera_model,
+        account_id: accountId,
       });
 
       if (id) {
@@ -63,7 +64,10 @@ if (require.main === module) {
   if (!folder) { console.error('Usage: node src/scan-orchestrator.js <folder> [root]'); process.exit(1); }
 
   const pool = new Pool({ host: 'localhost', user: 'postgres', password: '7297', database: 'photoapp' });
-  scanFolder(pool, folder, root).then(r => {
+  pool.query("SELECT id FROM catalog.accounts WHERE name = 'master'").then(({ rows }) => {
+    const accountId = rows[0]?.id || 1;
+    return scanFolder(pool, folder, root, accountId);
+  }).then(r => {
     console.log(JSON.stringify(r));
     pool.end();
   }).catch(err => {

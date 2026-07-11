@@ -25,7 +25,10 @@
       "Bash(do echo:*)",
       "Bash(\"C:/Program Files/PostgreSQL/17/bin/psql.exe\":*)",
       "Bash(read f:*)",
-      "Bash(shuf)"
+      "Bash(shuf)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(done)"
     ]
   }
 }

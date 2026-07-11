@@ -10,8 +10,8 @@ async function insertRecord(pool, record) {
   const { rows } = await pool.query(
     `INSERT INTO catalog.files
        (original_path, source_folder, filename, extension, size_bytes, file_hash, media_type, taken_at,
-        width, height, duration_secs, camera_make, camera_model)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        width, height, duration_secs, camera_make, camera_model, account_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING id`,
     [
       record.original_path,
@@ -27,6 +27,7 @@ async function insertRecord(pool, record) {
       record.duration_secs || null,
       record.camera_make || null,
       record.camera_model || null,
+      record.account_id,
     ]
   );
   return rows[0].id;

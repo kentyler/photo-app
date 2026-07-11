@@ -241,25 +241,49 @@
     #person-remove-popup .prp-cancel { background: transparent; color: var(--text-muted); text-align: center; }
     #person-remove-popup .prp-cancel:hover { color: var(--text-primary); }
 
-    /* Person detail popup (relationships) */
-    #person-detail-popup { display: none; position: fixed; z-index: 170; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 20px var(--shadow); width: 320px; max-height: 80vh; overflow-y: auto; }
-    #person-detail-popup.open { display: block; }
-    #person-detail-popup h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--text-primary); }
-    .pdp-rels { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
-    .pdp-rel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.85rem; }
-    .pdp-rel-row .rel-label { color: var(--link-color); margin-right: 0.4rem; }
-    .pdp-rel-row .rel-delete { background: none; border: none; color: var(--danger-bright); font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
-    .pdp-rel-row .rel-delete:hover { color: var(--danger-hover); }
-    .pdp-add-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem; }
-    .pdp-add-row select { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; }
-    .pdp-add-row .pdp-person-wrap { position: relative; flex: 1; }
-    .pdp-add-row input { width: 100%; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.8rem; box-sizing: border-box; }
-    .pdp-matches { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 180; display: none; }
-    .pdp-matches.open { display: block; }
-    .pdp-matches div { padding: 0.3rem 0.5rem; font-size: 0.8rem; cursor: pointer; }
-    .pdp-matches div:hover { background: var(--accent); }
-    .pdp-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 0.3rem 0.6rem; display: block; margin: 0 auto; }
-    .pdp-close:hover { color: var(--text-primary); }
+    /* Person form overlay */
+    #pf-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg); z-index: 250; }
+    #pf-overlay.active { display: flex; justify-content: center; align-items: flex-start; padding: 4rem 1rem; }
+    #pf-dialog { background: var(--bg-panel); border-radius: 8px; width: 520px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+    .pf-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem 0.75rem; border-bottom: 1px solid var(--bg-input); }
+    .pf-header h3 { margin: 0; font-size: 1rem; }
+    #pf-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+    #pf-close:hover { color: var(--text-primary); }
+    .pf-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; }
+    .pf-section { font-size: 0.8rem; color: var(--text-muted); margin: 0.75rem 0 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pf-section:first-child { margin-top: 0; }
+    .pf-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .pf-input { width: 100%; padding: 0.4rem 0.6rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.85rem; }
+    .pf-input-half { flex: 1; }
+    select.pf-input { cursor: pointer; }
+    textarea.pf-input { resize: vertical; min-height: 60px; font-family: inherit; }
+    .pf-alias-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.25rem; }
+    .pf-alias-row input[type=radio] { accent-color: var(--accent); cursor: pointer; }
+    .pf-alias-row .pf-alias-name { flex: 1; }
+    .pf-alias-row .pf-alias-del { background: none; border: none; color: var(--danger-bright); font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
+    .pf-alias-row .pf-alias-del:hover { color: var(--danger-hover); }
+    .pf-add-row { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.3rem; }
+    .pf-add-row input { flex: 1; padding: 0.3rem 0.5rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; font-size: 0.8rem; }
+    .pf-add-row button { padding: 0.3rem 0.7rem; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+    .pf-add-row button:hover { background: var(--accent-hover); }
+    .pf-rel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: var(--bg-input); border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.25rem; }
+    .pf-rel-row .pf-rel-label { color: var(--link-color); margin-right: 0.4rem; }
+    .pf-rel-row .pf-rel-del { background: none; border: none; color: var(--danger-bright); font-size: 1.1rem; font-weight: 700; cursor: pointer; padding: 0 0.3rem; }
+    .pf-rel-row .pf-rel-del:hover { color: var(--danger-hover); }
+    .pf-add-rel-row { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.3rem; }
+    .pf-add-rel-row select { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem; font-size: 0.8rem; }
+    .pf-add-rel-row .pf-rel-wrap { position: relative; flex: 1; }
+    .pf-add-rel-row input { width: 100%; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-accent); border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.8rem; box-sizing: border-box; }
+    .pf-rel-matches { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border-accent); border-radius: 0 0 4px 4px; max-height: 150px; overflow-y: auto; z-index: 260; display: none; }
+    .pf-rel-matches.open { display: block; }
+    .pf-rel-matches div { padding: 0.3rem 0.5rem; font-size: 0.8rem; cursor: pointer; }
+    .pf-rel-matches div:hover { background: var(--accent); }
+    .pf-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.75rem 1.2rem; border-top: 1px solid var(--bg-input); }
+    .pf-footer button { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    #pf-cancel { background: var(--cancel-bg); color: var(--text-primary); }
+    #pf-cancel:hover { opacity: 0.8; }
+    #pf-save { background: var(--accent); color: #fff; }
+    #pf-save:hover { background: var(--accent-hover); }
 
     /* Multi-select checkbox */
     .photo-card .select-cb { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; z-index: 10; }
@@ -434,6 +458,10 @@
     <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;color:var(--text-muted);cursor:pointer;">
       <input type="checkbox" id="select-all-cb"> Select all
     </label>
+    <select id="account-filter" style="padding:0.4rem 0.8rem;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-accent);border-radius:4px;font-size:0.9rem;">
+      <option value="all">All accounts</option>
+      <option value="master">Master only</option>
+    </select>
     <button id="header-history-btn">History</button>
     <button id="header-docs-btn">Documents</button>
     <button id="header-settings-btn" title="Settings">&#9881;</button>
@@ -646,6 +674,11 @@
       </select>
       <label for="settings-base-path">Photo base path</label>
       <input type="text" id="settings-base-path" placeholder="e.g. D:/">
+      <hr style="border-color:var(--border-accent);margin:0.5rem 0 1rem;">
+      <label for="settings-local-account">Local account name</label>
+      <input type="text" id="settings-local-account" placeholder="e.g. Bridget">
+      <label for="settings-local-photos-dir">Local photos directory</label>
+      <input type="text" id="settings-local-photos-dir" placeholder="e.g. C:/Users/Bridget/Photos">
       <div class="btn-row">
         <button class="btn-cancel" id="settings-cancel">Cancel</button>
         <button class="btn-save" id="settings-save">Save</button>
@@ -670,28 +703,65 @@
     <button class="prp-cancel" id="prp-cancel">Cancel</button>
   </div>
 
-  <div id="person-detail-popup">
-    <h3 id="pdp-title"></h3>
-    <div class="pdp-rels" id="pdp-rels"></div>
-    <div class="pdp-add-row">
-      <select id="pdp-type-select">
-        <option value="parent">parent</option>
-        <option value="child">child</option>
-        <option value="spouse">spouse</option>
-        <option value="sibling">sibling</option>
-        <option value="friend">friend</option>
-        <option value="employer">employer</option>
-        <option value="employee">employee</option>
-        <option value="teacher">teacher</option>
-        <option value="student">student</option>
-        <option value="classmate">classmate</option>
-      </select>
-      <div class="pdp-person-wrap">
-        <input id="pdp-person-input" placeholder="Type name...">
-        <div class="pdp-matches" id="pdp-person-matches"></div>
+  <!-- Person form overlay -->
+  <div id="pf-overlay">
+    <div id="pf-dialog">
+      <div class="pf-header">
+        <h3 id="pf-title">Edit Person</h3>
+        <button id="pf-close">&times;</button>
+      </div>
+      <div class="pf-body">
+        <div class="pf-section">Name</div>
+        <input class="pf-input" id="pf-name" placeholder="Primary name">
+
+        <div class="pf-section">Aliases</div>
+        <div id="pf-aliases"></div>
+        <div class="pf-add-row">
+          <input id="pf-alias-input" placeholder="Add alias...">
+          <button id="pf-alias-add">+ Add</button>
+        </div>
+
+        <div class="pf-section">Details</div>
+        <div class="pf-row">
+          <input class="pf-input pf-input-half" id="pf-birth" type="date" title="Birth date">
+          <input class="pf-input pf-input-half" id="pf-death" type="date" title="Death date">
+        </div>
+        <div class="pf-row">
+          <select class="pf-input" id="pf-gender" style="flex:1;">
+            <option value="">Gender...</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <textarea class="pf-input" id="pf-notes" placeholder="Notes..."></textarea>
+
+        <div class="pf-section">Relationships</div>
+        <div id="pf-rels"></div>
+        <div class="pf-add-rel-row">
+          <select id="pf-rel-type">
+            <option value="parent">parent</option>
+            <option value="child">child</option>
+            <option value="spouse">spouse</option>
+            <option value="sibling">sibling</option>
+            <option value="friend">friend</option>
+            <option value="employer">employer</option>
+            <option value="employee">employee</option>
+            <option value="teacher">teacher</option>
+            <option value="student">student</option>
+            <option value="classmate">classmate</option>
+          </select>
+          <div class="pf-rel-wrap">
+            <input id="pf-rel-input" placeholder="Type name...">
+            <div class="pf-rel-matches" id="pf-rel-matches"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pf-footer">
+        <button id="pf-cancel">Cancel</button>
+        <button id="pf-save">Save</button>
       </div>
     </div>
-    <button class="pdp-close" id="pdp-close">Close</button>
   </div>
 
   <div id="ctx-menu">
@@ -724,6 +794,8 @@
     let allTags = [];
     let currentPhoto = null;
     let activeSource = null; // 'folder', 'group', or 'disk'
+    const accountFilter = document.getElementById('account-filter');
+    let currentAccountFilter = 'all';
 
     // --- Folder tree dropdown ---
     folderBtn.addEventListener('click', () => {
@@ -813,6 +885,12 @@
       fetch('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'disk', folder: diskPath, label }) });
     }
 
+    // Account filter change
+    accountFilter.addEventListener('change', () => {
+      currentAccountFilter = accountFilter.value;
+      loadPhotos();
+    });
+
     // Load groups
     async function loadGroups() {
       const res = await fetch('/api/groups');
@@ -848,7 +926,8 @@
       const group = groupSelect.value;
 
       if (activeSource === 'group' && group) {
-        const res = await fetch(`/api/photos?group=${encodeURIComponent(group)}`);
+        const acctParam = currentAccountFilter !== 'all' ? `&account=${encodeURIComponent(currentAccountFilter)}` : '';
+        const res = await fetch(`/api/photos?group=${encodeURIComponent(group)}${acctParam}`);
         photos = await res.json();
         // DB photos: mark source
         photos.forEach(p => { p._src = 'db'; });
@@ -1180,7 +1259,7 @@
         if (nameLink) {
           nameLink.addEventListener('click', (e) => {
             e.stopPropagation();
-            showPersonDetailPopup(pp.person_id, pp.name, e.target);
+            openPersonForm(pp.person_id);
           });
         }
         // Click row to highlight rect on canvas (only in faces mode)
@@ -1259,93 +1338,170 @@
       }
     });
 
-    // --- Person detail popup (relationships) ---
-    const pdpPopup = document.getElementById('person-detail-popup');
-    const pdpTitle = document.getElementById('pdp-title');
-    const pdpRels = document.getElementById('pdp-rels');
-    const pdpTypeSelect = document.getElementById('pdp-type-select');
-    const pdpPersonInput = document.getElementById('pdp-person-input');
-    const pdpPersonMatches = document.getElementById('pdp-person-matches');
-    let pdpPersonId = null;
-    let pdpRelatedIds = new Set();
+    // --- Person form overlay ---
+    const pfOverlay = document.getElementById('pf-overlay');
+    const pfDialog = document.getElementById('pf-dialog');
+    const pfTitle = document.getElementById('pf-title');
+    const pfName = document.getElementById('pf-name');
+    const pfAliases = document.getElementById('pf-aliases');
+    const pfAliasInput = document.getElementById('pf-alias-input');
+    const pfBirth = document.getElementById('pf-birth');
+    const pfDeath = document.getElementById('pf-death');
+    const pfGender = document.getElementById('pf-gender');
+    const pfNotes = document.getElementById('pf-notes');
+    const pfRels = document.getElementById('pf-rels');
+    const pfRelType = document.getElementById('pf-rel-type');
+    const pfRelInput = document.getElementById('pf-rel-input');
+    const pfRelMatches = document.getElementById('pf-rel-matches');
+    let pfPersonId = null;
+    let pfRelatedIds = new Set();
 
-    async function showPersonDetailPopup(personId, name, anchorEl) {
-      pdpPersonId = personId;
-      pdpRelatedIds = new Set();
-      pdpTitle.textContent = name;
-      pdpPersonInput.value = '';
-      pdpPersonMatches.classList.remove('open');
-      // Load relationships
-      const rels = await (await fetch(`/api/people/${personId}/relationships`)).json();
-      pdpRels.innerHTML = '';
-      rels.forEach(r => {
-        pdpRelatedIds.add(r.related_id);
+    async function openPersonForm(personId) {
+      pfPersonId = personId;
+      pfRelatedIds = new Set();
+      // Load person scalar data
+      const person = allPeople.find(p => p.id === personId);
+      pfTitle.textContent = person ? person.name : 'Edit Person';
+      pfName.value = person ? person.name : '';
+      pfBirth.value = person && person.birth_date ? person.birth_date.slice(0, 10) : '';
+      pfDeath.value = person && person.death_date ? person.death_date.slice(0, 10) : '';
+      pfGender.value = (person && person.gender) || '';
+      pfNotes.value = (person && person.notes) || '';
+      pfAliasInput.value = '';
+      pfRelInput.value = '';
+      pfRelMatches.classList.remove('open');
+      // Load aliases and relationships in parallel
+      await Promise.all([loadPfAliases(), loadPfRels()]);
+      pfOverlay.classList.add('active');
+    }
+
+    function closePersonForm() {
+      pfOverlay.classList.remove('active');
+      pfPersonId = null;
+    }
+
+    async function loadPfAliases() {
+      const aliases = await (await fetch(`/api/people/${pfPersonId}/aliases`)).json();
+      pfAliases.innerHTML = '';
+      aliases.forEach(a => {
         const row = document.createElement('div');
-        row.className = 'pdp-rel-row';
-        row.innerHTML = `<span><span class="rel-label">${r.type}</span> ${r.related_name}</span><button class="rel-delete" title="Remove">&times;</button>`;
-        row.querySelector('.rel-delete').addEventListener('click', async () => {
-          await fetch(`/api/relationships/${r.id}`, { method: 'DELETE' });
-          showPersonDetailPopup(personId, name, anchorEl);
+        row.className = 'pf-alias-row';
+        row.innerHTML = `<input type="radio" name="pf-primary" ${a.is_primary ? 'checked' : ''} data-alias-id="${a.id}"><span class="pf-alias-name">${a.alias}</span>${a.is_primary ? '' : '<button class="pf-alias-del" title="Delete">&times;</button>'}`;
+        row.querySelector('input[type=radio]').addEventListener('change', async () => {
+          await fetch(`/api/aliases/${a.id}/primary`, { method: 'PUT' });
+          await loadPfAliases();
+          // Update name input to new primary
+          const updated = await (await fetch(`/api/people/${pfPersonId}/aliases`)).json();
+          const primary = updated.find(u => u.is_primary);
+          if (primary) { pfName.value = primary.alias; pfTitle.textContent = primary.alias; }
+          await loadAllPeople();
+          loadPhotoPeople();
         });
-        pdpRels.appendChild(row);
+        const delBtn = row.querySelector('.pf-alias-del');
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            await fetch(`/api/aliases/${a.id}`, { method: 'DELETE' });
+            await loadPfAliases();
+          });
+        }
+        pfAliases.appendChild(row);
       });
-      // Position near anchor
-      const rect = anchorEl.getBoundingClientRect();
-      pdpPopup.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
-      pdpPopup.style.top = Math.min(rect.bottom + 4, window.innerHeight - 400) + 'px';
-      pdpPopup.classList.add('open');
     }
 
-    function closePersonDetailPopup() {
-      pdpPopup.classList.remove('open');
-      pdpPersonId = null;
+    async function loadPfRels() {
+      const rels = await (await fetch(`/api/people/${pfPersonId}/relationships`)).json();
+      pfRelatedIds = new Set(rels.map(r => r.related_id));
+      pfRels.innerHTML = '';
+      rels.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'pf-rel-row';
+        row.innerHTML = `<span><span class="pf-rel-label">${r.type}</span> ${r.related_name}</span><button class="pf-rel-del" title="Remove">&times;</button>`;
+        row.querySelector('.pf-rel-del').addEventListener('click', async () => {
+          await fetch(`/api/relationships/${r.id}`, { method: 'DELETE' });
+          await loadPfRels();
+        });
+        pfRels.appendChild(row);
+      });
     }
 
-    document.getElementById('pdp-close').addEventListener('click', closePersonDetailPopup);
-
-    document.addEventListener('click', (e) => {
-      if (pdpPopup.classList.contains('open') && !pdpPopup.contains(e.target) && !e.target.classList.contains('person-name-link')) {
-        closePersonDetailPopup();
-      }
+    // Add alias
+    document.getElementById('pf-alias-add').addEventListener('click', async () => {
+      const alias = pfAliasInput.value.trim();
+      if (!alias || !pfPersonId) return;
+      await fetch(`/api/people/${pfPersonId}/aliases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alias })
+      });
+      pfAliasInput.value = '';
+      await loadPfAliases();
     });
 
-    // Type-ahead for adding relationships
-    pdpPersonInput.addEventListener('input', () => {
-      const q = pdpPersonInput.value.trim().toLowerCase();
-      pdpPersonMatches.innerHTML = '';
-      if (!q) { pdpPersonMatches.classList.remove('open'); return; }
+    pfAliasInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('pf-alias-add').click();
+    });
+
+    // Relationship type-ahead
+    pfRelInput.addEventListener('input', () => {
+      const q = pfRelInput.value.trim().toLowerCase();
+      pfRelMatches.innerHTML = '';
+      if (!q) { pfRelMatches.classList.remove('open'); return; }
       const hits = allPeople.filter(p =>
-        p.id !== pdpPersonId &&
+        p.id !== pfPersonId &&
         p.name.toLowerCase().includes(q) &&
-        !pdpRelatedIds.has(p.id)
+        !pfRelatedIds.has(p.id)
       ).slice(0, 10);
       hits.forEach(p => {
         const div = document.createElement('div');
         div.textContent = p.name;
         div.addEventListener('mousedown', async (e) => {
           e.preventDefault();
-          const type = pdpTypeSelect.value;
           await fetch('/api/relationships', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ person_id: pdpPersonId, related_id: p.id, type })
+            body: JSON.stringify({ person_id: pfPersonId, related_id: p.id, type: pfRelType.value })
           });
-          pdpPersonInput.value = '';
-          pdpPersonMatches.classList.remove('open');
-          // Refresh the popup
-          showPersonDetailPopup(pdpPersonId, pdpTitle.textContent, pdpPopup);
+          pfRelInput.value = '';
+          pfRelMatches.classList.remove('open');
+          await loadPfRels();
         });
-        pdpPersonMatches.appendChild(div);
+        pfRelMatches.appendChild(div);
       });
-      pdpPersonMatches.classList.toggle('open', hits.length > 0);
+      pfRelMatches.classList.toggle('open', hits.length > 0);
     });
 
-    pdpPersonInput.addEventListener('focus', () => {
-      if (pdpPersonInput.value.trim()) pdpPersonInput.dispatchEvent(new Event('input'));
+    pfRelInput.addEventListener('focus', () => {
+      if (pfRelInput.value.trim()) pfRelInput.dispatchEvent(new Event('input'));
     });
 
-    pdpPersonInput.addEventListener('blur', () => {
-      pdpPersonMatches.classList.remove('open');
+    pfRelInput.addEventListener('blur', () => {
+      pfRelMatches.classList.remove('open');
+    });
+
+    // Save scalar fields
+    document.getElementById('pf-save').addEventListener('click', async () => {
+      if (!pfPersonId) return;
+      await fetch(`/api/people/${pfPersonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: pfName.value.trim(),
+          birth_date: pfBirth.value || null,
+          death_date: pfDeath.value || null,
+          gender: pfGender.value || null,
+          notes: pfNotes.value.trim() || null
+        })
+      });
+      await loadAllPeople();
+      loadPhotoPeople();
+      closePersonForm();
+    });
+
+    // Close handlers
+    document.getElementById('pf-close').addEventListener('click', closePersonForm);
+    document.getElementById('pf-cancel').addEventListener('click', closePersonForm);
+    pfOverlay.addEventListener('click', (e) => {
+      if (e.target === pfOverlay) closePersonForm();
     });
 
     setupSidebarCombo({
@@ -2733,7 +2889,11 @@
     const settingsOverlay = document.getElementById('settings-overlay');
     const settingsTheme = document.getElementById('settings-theme');
     const settingsBasePath = document.getElementById('settings-base-path');
+    const settingsLocalAccount = document.getElementById('settings-local-account');
+    const settingsLocalPhotosDir = document.getElementById('settings-local-photos-dir');
     let savedTheme = 'dark';
+    let savedLocalAccount = '';
+    let savedLocalPhotosDir = '';
 
     function applyTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
@@ -2746,12 +2906,27 @@
         savedTheme = s.theme || 'dark';
         applyTheme(savedTheme);
         if (s.photo_base_path) flBrowsePath = s.photo_base_path;
+        savedLocalAccount = s.local_account || '';
+        savedLocalPhotosDir = s.local_photos_dir || '';
+        // Populate account filter dropdown with local account option
+        if (savedLocalAccount) {
+          // Remove existing local option if any
+          const existing = accountFilter.querySelector('option[data-local]');
+          if (existing) existing.remove();
+          const opt = document.createElement('option');
+          opt.value = savedLocalAccount;
+          opt.textContent = savedLocalAccount;
+          opt.setAttribute('data-local', '1');
+          accountFilter.appendChild(opt);
+        }
       } catch (_) {}
     }
 
     document.getElementById('header-settings-btn').addEventListener('click', () => {
       settingsTheme.value = savedTheme;
       settingsBasePath.value = flBrowsePath;
+      settingsLocalAccount.value = savedLocalAccount;
+      settingsLocalPhotosDir.value = savedLocalPhotosDir;
       settingsOverlay.classList.add('active');
     });
 
@@ -2768,14 +2943,28 @@
     document.getElementById('settings-save').addEventListener('click', async () => {
       const theme = settingsTheme.value;
       const basePath = settingsBasePath.value.trim();
+      const localAccount = settingsLocalAccount.value.trim();
+      const localPhotosDir = settingsLocalPhotosDir.value.trim();
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, photo_base_path: basePath })
+        body: JSON.stringify({ theme, photo_base_path: basePath, local_account: localAccount, local_photos_dir: localPhotosDir })
       });
       savedTheme = theme;
       applyTheme(theme);
       if (basePath) flBrowsePath = basePath;
+      savedLocalAccount = localAccount;
+      savedLocalPhotosDir = localPhotosDir;
+      // Update account filter dropdown
+      if (localAccount) {
+        const existing = accountFilter.querySelector('option[data-local]');
+        if (existing) existing.remove();
+        const opt = document.createElement('option');
+        opt.value = localAccount;
+        opt.textContent = localAccount;
+        opt.setAttribute('data-local', '1');
+        accountFilter.appendChild(opt);
+      }
       settingsOverlay.classList.remove('active');
     });
 

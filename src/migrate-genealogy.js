@@ -11,12 +11,20 @@ async function migrate() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS catalog.people (
       id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
       birth_date TEXT,
       death_date TEXT,
       gender TEXT,
       notes TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS catalog.person_aliases (
+      id SERIAL PRIMARY KEY,
+      person_id INTEGER NOT NULL REFERENCES catalog.people(id) ON DELETE CASCADE,
+      alias TEXT NOT NULL,
+      is_primary BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_person_alias ON catalog.person_aliases (person_id, alias);
 
     CREATE TABLE IF NOT EXISTS catalog.relationships (
       id SERIAL PRIMARY KEY,
