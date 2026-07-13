@@ -98,15 +98,17 @@ If they don't have it, tell them to ask Ken. The setup cannot continue without i
 LOWRES_ROOT=<the path from step A — use forward slashes, even on Windows>
 DB_HOST=35.222.142.30
 DB_PORT=5432
-DB_USER=postgres
+DB_USER=photoapp
 DB_PASSWORD='<the password from step B>'
 DB_NAME=photoapp
 DB_SSL=require
+DOCS_ROOT=<a local folder for document uploads, e.g. D:/photo-app-documents>
 ```
 
 Notes:
-- Use forward slashes in LOWRES_ROOT, even on Windows (`G:/My Drive/lowres` not `G:\My Drive\lowres`)
+- Use forward slashes in all paths, even on Windows (`G:/My Drive/lowres` not `G:\My Drive\lowres`)
 - Wrap DB_PASSWORD in single quotes — it contains special characters
+- DOCS_ROOT can be any local folder — it will be created if it doesn't exist
 - Do NOT commit this file to git (it's already in .gitignore)
 
 ---
