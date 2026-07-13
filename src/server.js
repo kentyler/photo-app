@@ -1204,6 +1204,27 @@ app.put('/api/settings', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Roots (multi-root folder sources) ---
+app.get('/api/roots', async (req, res) => {
+  const { rows } = await pool.query('SELECT id, label, path FROM catalog.roots ORDER BY label');
+  res.json(rows);
+});
+
+app.post('/api/roots', async (req, res) => {
+  const { label, path: rootPath } = req.body;
+  if (!label || !rootPath) return res.status(400).json({ error: 'label and path required' });
+  const { rows } = await pool.query(
+    'INSERT INTO catalog.roots (label, path) VALUES ($1, $2) RETURNING id, label, path',
+    [label, rootPath]
+  );
+  res.json(rows[0]);
+});
+
+app.delete('/api/roots/:id', async (req, res) => {
+  await pool.query('DELETE FROM catalog.roots WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // --- History & Bookmarks (local JSON files) ---
 const HISTORY_FILE = path.join(__dirname, '..', '.history.json');
 const BOOKMARKS_FILE = path.join(__dirname, '..', '.bookmarks.json');

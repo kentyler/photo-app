@@ -672,8 +672,13 @@
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
-      <label for="settings-base-path">Photo base path</label>
-      <input type="text" id="settings-base-path" placeholder="e.g. D:/">
+      <label>Photo roots</label>
+      <div id="settings-roots-list" style="margin-bottom:0.5rem;max-height:150px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:0.4rem;margin-bottom:1rem;">
+        <input type="text" id="settings-root-label" placeholder="Label" style="flex:1;">
+        <input type="text" id="settings-root-path" placeholder="Path e.g. D:/" style="flex:2;">
+        <button id="settings-root-add" style="padding:0.4rem 0.7rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;">+ Add</button>
+      </div>
       <hr style="border-color:var(--border-accent);margin:0.5rem 0 1rem;">
       <label for="settings-local-account">Local account name</label>
       <input type="text" id="settings-local-account" placeholder="e.g. Bridget">
@@ -755,6 +760,7 @@
             <input id="pf-rel-input" placeholder="Type name...">
             <div class="pf-rel-matches" id="pf-rel-matches"></div>
           </div>
+          <button id="pf-rel-add" class="pf-add-btn">+ Add</button>
         </div>
       </div>
       <div class="pf-footer">
@@ -777,7 +783,7 @@
     const flBreadcrumb = document.getElementById('fl-breadcrumb');
     const flItems = document.getElementById('fl-items');
     let selectedFolder = ''; // disk path of chosen folder
-    let flBrowsePath = 'D:/'; // current browsing path in tree dropdown
+    let flBrowsePath = null; // null = show roots view, string = browsing inside a root
     const groupSelect = document.getElementById('group-select');
     const filterRating = document.getElementById('filter-rating');
     const filterTag = document.getElementById('filter-tag');
@@ -811,23 +817,64 @@
       if (!e.target.closest('#folder-dropdown')) folderList.classList.remove('open');
     });
 
+    function findRootForPath(p) {
+      return flRoots.find(r => p === r.path || p.startsWith(r.path.replace(/\/?$/, '/')));
+    }
+
     function renderFlBreadcrumb() {
       flBreadcrumb.innerHTML = '';
-      const parts = flBrowsePath.split('/');
-      parts.forEach((part, i) => {
-        if (i > 0) {
-          const sep = document.createElement('span');
-          sep.className = 'fl-sep';
-          sep.textContent = '/';
-          flBreadcrumb.appendChild(sep);
-        }
+      if (flBrowsePath === null) {
         const crumb = document.createElement('span');
         crumb.className = 'fl-crumb';
-        crumb.textContent = part || '/';
-        const ancestorPath = parts.slice(0, i + 1).join('/');
+        crumb.textContent = 'Roots';
+        flBreadcrumb.appendChild(crumb);
+        return;
+      }
+      // "Roots" link
+      const home = document.createElement('span');
+      home.className = 'fl-crumb';
+      home.textContent = 'Roots';
+      home.addEventListener('click', (e) => {
+        e.stopPropagation();
+        flBrowsePath = null;
+        renderFolderTree();
+      });
+      flBreadcrumb.appendChild(home);
+
+      const root = findRootForPath(flBrowsePath);
+      const rootPath = root ? root.path : flBrowsePath;
+      const rootLabel = root ? root.label : rootPath;
+      const relative = flBrowsePath.slice(rootPath.replace(/\/?$/, '/').length);
+      const segments = relative ? relative.split('/').filter(Boolean) : [];
+
+      // Root crumb
+      const sep0 = document.createElement('span');
+      sep0.className = 'fl-sep'; sep0.textContent = '/';
+      flBreadcrumb.appendChild(sep0);
+      const rc = document.createElement('span');
+      rc.className = 'fl-crumb';
+      rc.textContent = rootLabel;
+      rc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        flBrowsePath = rootPath;
+        renderFolderTree();
+      });
+      flBreadcrumb.appendChild(rc);
+
+      // Subfolder crumbs
+      let acc = rootPath.replace(/\/?$/, '');
+      segments.forEach(seg => {
+        acc += '/' + seg;
+        const sep = document.createElement('span');
+        sep.className = 'fl-sep'; sep.textContent = '/';
+        flBreadcrumb.appendChild(sep);
+        const crumb = document.createElement('span');
+        crumb.className = 'fl-crumb';
+        crumb.textContent = seg;
+        const target = acc;
         crumb.addEventListener('click', (e) => {
           e.stopPropagation();
-          flBrowsePath = ancestorPath;
+          flBrowsePath = target;
           renderFolderTree();
         });
         flBreadcrumb.appendChild(crumb);
@@ -836,6 +883,43 @@
 
     async function renderFolderTree() {
       renderFlBreadcrumb();
+      flItems.innerHTML = '';
+
+      // Roots view
+      if (flBrowsePath === null) {
+        if (flRoots.length === 0) {
+          flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--text-muted);font-size:0.85rem;">No roots configured. Add them in Settings.</div>';
+          return;
+        }
+        flRoots.forEach(r => {
+          const row = document.createElement('div');
+          row.className = 'fl-item';
+          const name = document.createElement('span');
+          name.className = 'fl-name';
+          name.textContent = r.label;
+          name.title = r.path;
+          name.addEventListener('click', (e) => {
+            e.stopPropagation();
+            flBrowsePath = r.path;
+            renderFolderTree();
+          });
+          row.appendChild(name);
+          const drill = document.createElement('span');
+          drill.className = 'fl-drill';
+          drill.innerHTML = '&#9654;';
+          drill.title = 'Browse subfolders';
+          drill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            flBrowsePath = r.path;
+            renderFolderTree();
+          });
+          row.appendChild(drill);
+          flItems.appendChild(row);
+        });
+        return;
+      }
+
+      // Subfolder view
       flItems.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--text-muted);font-size:0.85rem;">Loading...</div>';
       try {
         const res = await fetch(`/api/disk-folders?path=${encodeURIComponent(flBrowsePath)}`);
@@ -1442,32 +1526,49 @@
     });
 
     // Relationship type-ahead
+    let pfRelHits = []; // current matches for + Add / Enter
     pfRelInput.addEventListener('input', () => {
       const q = pfRelInput.value.trim().toLowerCase();
       pfRelMatches.innerHTML = '';
-      if (!q) { pfRelMatches.classList.remove('open'); return; }
-      const hits = allPeople.filter(p =>
+      if (!q) { pfRelHits = []; pfRelMatches.classList.remove('open'); return; }
+      pfRelHits = allPeople.filter(p =>
         p.id !== pfPersonId &&
         p.name.toLowerCase().includes(q) &&
         !pfRelatedIds.has(p.id)
       ).slice(0, 10);
-      hits.forEach(p => {
+      pfRelHits.forEach(p => {
         const div = document.createElement('div');
         div.textContent = p.name;
         div.addEventListener('mousedown', async (e) => {
           e.preventDefault();
-          await fetch('/api/relationships', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ person_id: pfPersonId, related_id: p.id, type: pfRelType.value })
-          });
-          pfRelInput.value = '';
-          pfRelMatches.classList.remove('open');
-          await loadPfRels();
+          await addRelationship(p.id);
         });
         pfRelMatches.appendChild(div);
       });
-      pfRelMatches.classList.toggle('open', hits.length > 0);
+      pfRelMatches.classList.toggle('open', pfRelHits.length > 0);
+    });
+
+    async function addRelationship(relatedId) {
+      await fetch('/api/relationships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ person_id: pfPersonId, related_id: relatedId, type: pfRelType.value })
+      });
+      pfRelInput.value = '';
+      pfRelHits = [];
+      pfRelMatches.classList.remove('open');
+      await loadPfRels();
+    }
+
+    document.getElementById('pf-rel-add').addEventListener('click', async () => {
+      if (pfRelHits.length > 0) await addRelationship(pfRelHits[0].id);
+    });
+
+    pfRelInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && pfRelHits.length > 0) {
+        e.preventDefault();
+        addRelationship(pfRelHits[0].id);
+      }
     });
 
     pfRelInput.addEventListener('focus', () => {
@@ -2888,12 +2989,12 @@
     // --- Settings ---
     const settingsOverlay = document.getElementById('settings-overlay');
     const settingsTheme = document.getElementById('settings-theme');
-    const settingsBasePath = document.getElementById('settings-base-path');
     const settingsLocalAccount = document.getElementById('settings-local-account');
     const settingsLocalPhotosDir = document.getElementById('settings-local-photos-dir');
     let savedTheme = 'dark';
     let savedLocalAccount = '';
     let savedLocalPhotosDir = '';
+    let flRoots = []; // multi-root sources
 
     function applyTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
@@ -2905,12 +3006,10 @@
         const s = await res.json();
         savedTheme = s.theme || 'dark';
         applyTheme(savedTheme);
-        if (s.photo_base_path) flBrowsePath = s.photo_base_path;
         savedLocalAccount = s.local_account || '';
         savedLocalPhotosDir = s.local_photos_dir || '';
         // Populate account filter dropdown with local account option
         if (savedLocalAccount) {
-          // Remove existing local option if any
           const existing = accountFilter.querySelector('option[data-local]');
           if (existing) existing.remove();
           const opt = document.createElement('option');
@@ -2920,13 +3019,65 @@
           accountFilter.appendChild(opt);
         }
       } catch (_) {}
+      // Load roots
+      try {
+        const rres = await fetch('/api/roots');
+        flRoots = await rres.json();
+      } catch (_) { flRoots = []; }
+      if (flRoots.length > 0) {
+        flBrowsePath = null; // show roots view
+      } else {
+        flBrowsePath = flBrowsePath || 'D:/';
+      }
     }
+
+    function renderSettingsRoots() {
+      const list = document.getElementById('settings-roots-list');
+      list.innerHTML = '';
+      flRoots.forEach(r => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0;';
+        row.innerHTML = `<span style="flex:1;font-size:0.85rem;"><b>${r.label}</b> &mdash; ${r.path}</span>`;
+        const del = document.createElement('button');
+        del.textContent = '\u00d7';
+        del.title = 'Remove root';
+        del.style.cssText = 'background:transparent;border:1px solid var(--border-accent);color:var(--text-muted);border-radius:4px;cursor:pointer;padding:0.1rem 0.4rem;font-size:0.9rem;';
+        del.addEventListener('click', async () => {
+          await fetch(`/api/roots/${r.id}`, { method: 'DELETE' });
+          flRoots = flRoots.filter(x => x.id !== r.id);
+          renderSettingsRoots();
+        });
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+      if (flRoots.length === 0) {
+        list.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted);">No roots configured.</div>';
+      }
+    }
+
+    document.getElementById('settings-root-add').addEventListener('click', async () => {
+      const label = document.getElementById('settings-root-label').value.trim();
+      const rootPath = document.getElementById('settings-root-path').value.trim();
+      if (!label || !rootPath) return;
+      const res = await fetch('/api/roots', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, path: rootPath })
+      });
+      if (res.ok) {
+        const newRoot = await res.json();
+        flRoots.push(newRoot);
+        flRoots.sort((a, b) => a.label.localeCompare(b.label));
+        renderSettingsRoots();
+        document.getElementById('settings-root-label').value = '';
+        document.getElementById('settings-root-path').value = '';
+      }
+    });
 
     document.getElementById('header-settings-btn').addEventListener('click', () => {
       settingsTheme.value = savedTheme;
-      settingsBasePath.value = flBrowsePath;
       settingsLocalAccount.value = savedLocalAccount;
       settingsLocalPhotosDir.value = savedLocalPhotosDir;
+      renderSettingsRoots();
       settingsOverlay.classList.add('active');
     });
 
@@ -2942,17 +3093,15 @@
 
     document.getElementById('settings-save').addEventListener('click', async () => {
       const theme = settingsTheme.value;
-      const basePath = settingsBasePath.value.trim();
       const localAccount = settingsLocalAccount.value.trim();
       const localPhotosDir = settingsLocalPhotosDir.value.trim();
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, photo_base_path: basePath, local_account: localAccount, local_photos_dir: localPhotosDir })
+        body: JSON.stringify({ theme, local_account: localAccount, local_photos_dir: localPhotosDir })
       });
       savedTheme = theme;
       applyTheme(theme);
-      if (basePath) flBrowsePath = basePath;
       savedLocalAccount = localAccount;
       savedLocalPhotosDir = localPhotosDir;
       // Update account filter dropdown
@@ -2965,6 +3114,8 @@
         opt.setAttribute('data-local', '1');
         accountFilter.appendChild(opt);
       }
+      // Reset folder browser to roots view
+      if (flRoots.length > 0) flBrowsePath = null;
       settingsOverlay.classList.remove('active');
     });
 
