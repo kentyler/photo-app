@@ -649,7 +649,7 @@ app.delete('/api/aliases/:id', async (req, res) => {
 });
 
 // --- Relationships (bidirectional storage) ---
-const INVERSE_TYPE = { parent: 'child', child: 'parent', spouse: 'spouse', sibling: 'sibling', friend: 'friend', employer: 'employee', employee: 'employer', teacher: 'student', student: 'teacher', classmate: 'classmate' };
+const INVERSE_TYPE = { parent: 'child', child: 'parent', father: 'child', mother: 'child', grandparent: 'grandchild', grandchild: 'grandparent', grandfather: 'grandchild', grandmother: 'grandchild', godparent: 'godchild', godfather: 'godchild', godmother: 'godchild', godchild: 'godparent', spouse: 'spouse', sibling: 'sibling', cousin: 'cousin', aunt: 'niece', uncle: 'nephew', niece: 'aunt', nephew: 'uncle', friend: 'friend', employer: 'employee', employee: 'employer', teacher: 'student', student: 'teacher', classmate: 'classmate' };
 
 app.get('/api/people/:id/relationships', async (req, res) => {
   const { rows } = await pool.query(
@@ -664,19 +664,19 @@ app.get('/api/people/:id/relationships', async (req, res) => {
 });
 
 app.post('/api/relationships', async (req, res) => {
-  const { person_id, related_id, type, start_date, end_date } = req.body;
+  const { person_id, related_id, type, start_date, end_date, basis } = req.body;
   const inverse = INVERSE_TYPE[type];
   if (!inverse) return res.status(400).json({ error: 'invalid relationship type' });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [person_id, related_id, type, start_date || null, end_date || null]
+      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date, basis) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [person_id, related_id, type, start_date || null, end_date || null, basis || null]
     );
     await client.query(
-      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date) VALUES ($1,$2,$3,$4,$5)',
-      [related_id, person_id, inverse, start_date || null, end_date || null]
+      'INSERT INTO catalog.relationships (person_id, related_id, type, start_date, end_date, basis) VALUES ($1,$2,$3,$4,$5,$6)',
+      [related_id, person_id, inverse, start_date || null, end_date || null, basis || null]
     );
     await client.query('COMMIT');
     res.json(rows[0]);

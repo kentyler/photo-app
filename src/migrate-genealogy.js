@@ -53,6 +53,8 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_photo_people_person ON catalog.photo_people(person_id);
   `);
 
+  await pool.query(`ALTER TABLE catalog.relationships ADD COLUMN IF NOT EXISTS basis TEXT`);
+
   console.log('Genealogy tables created.');
   await pool.end();
 }

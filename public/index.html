@@ -747,14 +747,37 @@
           <select id="pf-rel-type">
             <option value="parent">parent</option>
             <option value="child">child</option>
+            <option value="father">father</option>
+            <option value="mother">mother</option>
+            <option value="grandparent">grandparent</option>
+            <option value="grandchild">grandchild</option>
+            <option value="grandfather">grandfather</option>
+            <option value="grandmother">grandmother</option>
+            <option value="godparent">godparent</option>
+            <option value="godfather">godfather</option>
+            <option value="godmother">godmother</option>
+            <option value="godchild">godchild</option>
             <option value="spouse">spouse</option>
             <option value="sibling">sibling</option>
+            <option value="cousin">cousin</option>
+            <option value="aunt">aunt</option>
+            <option value="uncle">uncle</option>
+            <option value="niece">niece</option>
+            <option value="nephew">nephew</option>
             <option value="friend">friend</option>
             <option value="employer">employer</option>
             <option value="employee">employee</option>
             <option value="teacher">teacher</option>
             <option value="student">student</option>
             <option value="classmate">classmate</option>
+          </select>
+          <select id="pf-rel-basis">
+            <option value="">(none)</option>
+            <option value="biological">biological</option>
+            <option value="adoptive">adoptive</option>
+            <option value="step">step</option>
+            <option value="foster">foster</option>
+            <option value="de facto">de facto</option>
           </select>
           <div class="pf-rel-wrap">
             <input id="pf-rel-input" placeholder="Type name...">
@@ -1499,7 +1522,8 @@
       rels.forEach(r => {
         const row = document.createElement('div');
         row.className = 'pf-rel-row';
-        row.innerHTML = `<span><span class="pf-rel-label">${r.type}</span> ${r.related_name}</span><button class="pf-rel-del" title="Remove">&times;</button>`;
+        const basisTag = r.basis ? ` (${r.basis})` : '';
+        row.innerHTML = `<span><span class="pf-rel-label">${r.type}${basisTag}</span> ${r.related_name}</span><button class="pf-rel-del" title="Remove">&times;</button>`;
         row.querySelector('.pf-rel-del').addEventListener('click', async () => {
           await fetch(`/api/relationships/${r.id}`, { method: 'DELETE' });
           await loadPfRels();
@@ -1552,7 +1576,7 @@
       await fetch('/api/relationships', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ person_id: pfPersonId, related_id: relatedId, type: pfRelType.value })
+        body: JSON.stringify({ person_id: pfPersonId, related_id: relatedId, type: pfRelType.value, basis: document.getElementById('pf-rel-basis').value || null })
       });
       pfRelInput.value = '';
       pfRelHits = [];
